@@ -26,7 +26,7 @@ sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings
           mutate(sample_stage=paste(sample, stage, sep="_"))
 
 filenames <- data.frame(read.table("../qc-processing/featureCounts/filenames.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
-          rename(filename = 1) %>%
+          dplyr::rename(filename = 1) %>%
           mutate(sample = as.character(gsub("_.*","", filename))) %>% 
           left_join(sample.info[c("sample", "sample_stage")])
 
@@ -39,11 +39,18 @@ save(key, file="../raw-data/key")
 counts <- data.frame(read.table("../qc-processing/featureCounts/test-out_featurecounts.Rmatrix.txt", header = T, stringsAsFactors = F, fill = FALSE)) %>%
           column_to_rownames(var="Geneid") %>%
           rename_all(~as.character(filenames$sample_stage))
-
-print(paste("number of samples:", ncol(counts), sep=" "))
-print(paste("number of genes in dataframe:", nrow(counts), sep=" "))
 save(counts, file = "../results/counts")
 ```
+
+### Summarize counts
+
+```{r}
+print(paste("Number of samples:", ncol(counts), sep=" "))
+print(paste("Total number of genes in dataframe:", prettyNum(nrow(counts), big.mark = ","), sep=" "))
+print(paste("Total counts, all samples:", prettyNum(sum(colSums(counts)), big.mark = ","), sep=" "))
+print(paste("Counts for", colnames(counts), ":",  prettyNum(colSums(counts), big.mark = ","), sep=" "))
+```
+
 
 ### Transpose dataframe so each row = a sample (aka "objects"), and each column = genes (aka "variables") 
 ```{r}
