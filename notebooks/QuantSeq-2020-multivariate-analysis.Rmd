@@ -1,5 +1,5 @@
 ---
-title: "QuantSeq-Initial-Look"
+title: "QuantSeq-Initial-Look-Bowtie"
 output: html_document
 ---
 
@@ -36,7 +36,7 @@ save(key, file="../raw-data/key")
 
 ### Import counts matrix file as dataframe. 
 ```{r}
-counts <- data.frame(read.table("../qc-processing/featureCounts/test-out_featurecounts.Rmatrix.txt", header = T, stringsAsFactors = F, fill = FALSE)) %>%
+counts <- data.frame(read.table("../qc-processing/featureCounts/test-out_featurecounts-2kbdown.Rmatrix.txt", header = T, stringsAsFactors = F, fill = FALSE)) %>%
           column_to_rownames(var="Geneid") %>%
           rename_all(~as.character(filenames$sample_stage))
 save(counts, file = "../results/counts")
@@ -50,7 +50,6 @@ print(paste("Total number of genes in dataframe:", prettyNum(nrow(counts), big.m
 print(paste("Total counts, all samples:", prettyNum(sum(colSums(counts)), big.mark = ","), sep=" "))
 print(paste("Counts for", colnames(counts), ":",  prettyNum(colSums(counts), big.mark = ","), sep=" "))
 ```
-
 
 ### Transpose dataframe so each row = a sample (aka "objects"), and each column = genes (aka "variables") 
 ```{r}
@@ -88,8 +87,9 @@ Finally, to answer the question on the relation between total abundance and numb
   - The last plot is a scatter plot of the two variables. Is there is relationship between the number of gene per sample and the total abundance? Do gene-rich samples generally have a greater total abundance of those genes as well? 
 
 ```{r}
-foa.plots(counts.ts)
+#foa.plots(counts.ts)
 ```
+
 ### Generate heat map for initial inspection
 
 ```{r}
@@ -117,10 +117,6 @@ print(paste("# of genes not present in adult samples & dropped:", ncol(counts.ts
 print(paste("# of genes not present in juvenile samples & dropped:", ncol(counts.ts.juvenile) - ncol(counts.ts.juvenile.s), sep=" "))
 print(paste("# of genes not present in larval samples & dropped:", ncol(counts.ts.larvae) - ncol(counts.ts.larvae.s), sep=" "))
 
-print(paste("# of adult ctenidia genes for analysis:", ncol(counts.ts.adult.s), sep=" ")) # 76879 in adult samples 
-print(paste("# of juvenile whole-body genes for analysis:", ncol(counts.ts.juvenile.s), sep=" ")) # 56852 in juvenile samples 
-print(paste("# of larval whole body (pooed) genes for analysis:", ncol(counts.ts.larvae.s), sep=" ")) # 67916 in larval samples 
-
 #write.csv(counts.ts.adult.s, file="../results/adult.counts.csv")
 #write.csv(counts.ts.juvenile.s, file="../results/juvenile.counts.csv")
 #write.csv(counts.ts.larvae.s, file="../results/larvae.counts.csv")
@@ -130,19 +126,27 @@ print(paste("# of larval whole body (pooed) genes for analysis:", ncol(counts.ts
 
 ```{r}
 counts.ts.adult.sv <- drop.var(counts.ts.adult.s, min.cv=5) 
-ncol(counts.ts.adult.s) - ncol(counts.ts.adult.sv) #number of contigs/genes dropped due to low variance .. 4255 
+ncol(counts.ts.adult.s) - ncol(counts.ts.adult.sv) #number of contigs/genes dropped due to low variance .. 1954 
 
 counts.ts.juvenile.sv <- drop.var(counts.ts.juvenile.s, min.cv=5) 
-ncol(counts.ts.juvenile.s) - ncol(counts.ts.juvenile.sv) #number of contigs/genes dropped due to low variance .. 3140 
+ncol(counts.ts.juvenile.s) - ncol(counts.ts.juvenile.sv) #number of contigs/genes dropped due to low variance .. 1448 
 
 counts.ts.larvae.sv <- drop.var(counts.ts.larvae.s, min.cv=5) 
-ncol(counts.ts.larvae.s) - ncol(counts.ts.larvae.sv) #number of contigs/genes dropped due to low variance .. 3 
+ncol(counts.ts.larvae.s) - ncol(counts.ts.larvae.sv) #number of contigs/genes dropped due to low variance .. 2 
 
-save(counts.ts.adult.sv, file="../results/counts.ts.adult.sv")
-save(counts.ts.juvenile.sv, file="../results/counts.ts.juvenile.sv")
-save(counts.ts.larvae.sv, file="../results/counts.ts.larvae.sv")
+print(paste("# of adult ctenidia genes for analysis:", ncol(counts.ts.adult.sv), sep=" ")) 
+print(paste("# of juvenile whole-body genes for analysis:", ncol(counts.ts.juvenile.sv), sep=" ")) 
+print(paste("# of larval whole body (pooed) genes for analysis:", ncol(counts.ts.larvae.sv), sep=" ")) 
 
+# save(counts.ts.adult.sv, file="../results/counts.ts.adult.sv")
+# save(counts.ts.juvenile.sv, file="../results/counts.ts.juvenile.sv")
+# save(counts.ts.larvae.sv, file="../results/counts.ts.larvae.sv")
 ```
+
+```{r}
+head(counts.ts.juvenile.sv)
+```
+
 
 ### Heat maps for adult, larval tissues separately 
 

@@ -6,6 +6,11 @@ output: html_document
 ---
 
 
+Found [this helpful tutorial](https://www.hadriengourle.com/tutorials/rna/) that provides R script to load in and aggregate multiple Salmon output files. 
+
+"Salmon did the quantifiation of the transcript level. We want to see which genes are differentially expressed, so we need to link the transcript names to the gene names. We will use the blast GFF file for that, and the GenomicFeatures package:"
+
+
 ### Load libraries
 
 ```{r message=FALSE, warning=FALSE, results=FALSE}
@@ -18,6 +23,12 @@ if(length(new.packages)) install.packages(new.packages)
 lapply(list.of.packages, FUN = function(X) {
   do.call("require", list(X)) 
 })
+
+# Load tximport via bioconductor 
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("tximport")
+library(tximport)
 ```
 
 ### Obtain session information
@@ -27,28 +38,71 @@ sessionInfo()
 getwd()
 ```
 
+## Prep transcript to gene object 
 
+```{r}
+trans2gene <- read.table(file = "../references/Olurida_transcriptome_v3_blastx.tab", header=F, sep = "\t",  #read in tab-delimited blastx results 
+                       col.names = c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen",         #rename columns 
+                                     "qstart", "qend", "sstart", "send", "evalue", "bitscore")) %>% 
+    tidyr::separate(sseqid, "\\|", remove=F, into=c("sp","gene","species")) %>%                             #separate gene ID into its own column 
+    group_by(qseqid) %>% dplyr::slice(which.min(evalue)) %>%                                                #transcripts match w/ multiple genes; keep top hit (lowest e-value) 
+    ungroup %>% dplyr::select(qseqid, gene)                                                                 #keep only the transcript ID and gene ID columns 
 
+trans2gene %>% head()
+paste("No. of genes blasted to Oly transcriptome v3: ", trans2gene %>% nrow(), sep="")
+```
 
+### Import QuantSeq sample info, library/file names, and then join 
+
+```{r}
+sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
+          mutate_at(vars(lane, temp.parent), as.factor) %>% 
+          mutate_at(vars(RNA.conc, endpoint.RFU, bioan.mean.bp), as.numeric) %>%
+          mutate(sample_stage=paste(sample, stage, sep="_"))
+
+filenames <- data.frame(read.table("../qc-processing/salmon/filenames.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
+          dplyr::rename(filename = 1, sample=2) %>% 
+          mutate_at(vars(sample), as.factor) %>% 
+          left_join(sample.info[c("sample", "sample_stage")])
+
+files <- file.path(filenames$filename) #extract vector of filenames 
+all(file.exists(files)) #easy code to check that all files exist! 
+names(files) <- filenames$sample_stage #name each filename with sample#_type
+key <- full_join(sample.info, filenames) 
+
+# save(key, file="../raw-data/key")
+```
 
 ## Read in Salmon Count data 
 
-Found [this helpful tutorial](https://www.hadriengourle.com/tutorials/rna/) that provides R script to load in and aggregate multiple Salmon output files. 
+_The tximport package has a single function for importing transcript-level estimates. The type argument is used to specify what software was used for estimation (“kallisto”, “salmon”, “sailfish”, and “rsem” are implemented). A simple list with matrices, “abundance”, “counts”, and “length”, is returned, where the transcript level information is summarized to the gene-level. The “length” matrix can be used to generate an offset matrix for downstream gene-level differential analysis of count matrices, as shown below._
 
-"Salmon did the quantifiation of the transcript level. We want to see which genes are differentially expressed, so we need to link the transcript names to the gene names. We can use our .gtf annotation for that, and the GenomicFeatures package:"
+### Generate transcript-level abundance count matrix 
+
+We can avoid gene-level summarization by setting txOut=TRUE, giving the original transcript level estimates as a list of matrices.
 
 ```{r}
-txdb <- makeTxDbFromGFF("../references/20190709-Olurida_v081.stringtie.gtf")
-txdb
-keytypes(txdb)
-print(k <- keys(txdb, keytype = "GENEID"))
-print(k <- keys(txdb, keytype = "EXONID"))
-print(k <- keys(txdb, keytype = "EXONNAME"))
-txdb
-
-tx2gene <- select(txdb, keys = k, keytype = "GENEID", columns = "TXNAME")
-head(tx2gene)
-
+txi.tx <- tximport(files, type = "salmon", txOut = TRUE)
 ```
 
+## Generate gene-level abundance count matrix 
 
+```{r}
+txi.gen <- summarizeToGene(txi.tx, trans2gene) 
+names(txi.gen)
+all.equal(txi.tx$counts, txi.gen$counts) #not all transcripts are represented in gene list, makes sense
+paste("No. genes identified by Salmon across all samples: ", nrow(txi.gen$counts), sep="")
+```
+
+## Check out gene count matrix 
+
+```{r}
+head(txi.gen$counts)
+save(txi.gen, file = "../results/counts.salmon")
+save(txi.gen, file = "../results/txi.gen")
+```
+
+## Note: the `counts.salmon` matrix is the full matrix of gene counts across all samples. I will then import it into DESeq2. Important note about importing 3' tagged data from the Tximport package vignette: 
+
+### _3’ tagged RNA-seq_
+_If you have 3’ tagged RNA-seq data, then correcting the counts for gene length will induce a bias in your analysis, because the counts do not have length bias. Instead of using the default full-transcript-length pipeline, we recommend to use the original counts, e.g. txi$counts as a counts matrix, e.g. providing to `DESeqDataSetFromMatrix` or to the edgeR or limma functions without calculating an offset and without using countsFromAbundance._

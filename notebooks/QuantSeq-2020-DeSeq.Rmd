@@ -70,21 +70,21 @@ load("../raw-data/key")
 adult.key <- key %>%
           filter(stage=="adult") %>% 
           filter(sample_stage %in% colnames(counts.adult)) %>%
-          select(sample_stage, sample, stage, temp.parent, pCO2.parent, population, pcr.cycles, prep.batch) %>%
+          dplyr::select(sample_stage, sample, stage, temp.parent, pCO2.parent, population, pcr.cycles, prep.batch) %>%
           column_to_rownames('sample_stage')
 all(rownames(adult.key) == colnames(counts.adult)) #confirm samples are in same order in count file and key 
 
 juvenile.key <- key %>%
           filter(stage=="juvenile") %>% 
           filter(sample_stage %in% colnames(counts.juvenile)) %>%
-          select(sample_stage, sample, stage, temp.parent, pCO2.parent, population, pcr.cycles, prep.batch) %>%
+          dplyr::select(sample_stage, sample, stage, temp.parent, pCO2.parent, population, pcr.cycles, prep.batch) %>%
           column_to_rownames('sample_stage')
 all(rownames(juvenile.key) == colnames(counts.juvenile)) #confirm samples are in same order in count file and key 
 
 larvae.key <- key %>%
           filter(stage=="larvae") %>% 
           filter(sample_stage %in% colnames(counts.larvae)) %>%
-          select(sample_stage, sample, stage, temp.parent, pCO2.parent, population, pcr.cycles, prep.batch) %>%
+          dplyr::select(sample_stage, sample, stage, temp.parent, pCO2.parent, population, pcr.cycles, prep.batch) %>%
           column_to_rownames('sample_stage')
 all(rownames(larvae.key) == colnames(counts.larvae)) #confirm samples are in same order in count file and key 
 ```
@@ -187,9 +187,9 @@ plotMA(resAsh.pH, xlim=xlim, ylim=ylim, main="ashr")
 
 ```{r}
 pH.p05.names <-rownames(subset(res.larvae.pCO2.ordered, pvalue < 0.05)) #padj super high across the board - check out contigs with low pvalues instead ... 
-for (i in 1:length(pH.p05.names)) {
-          plotCounts(dds.larvae.pCO2.DESeq, gene=pH.p05.names[i], intgroup="pCO2.parent")
-}
+# for (i in 1:length(pH.p05.names)) {
+#           plotCounts(dds.larvae.pCO2.DESeq, gene=pH.p05.names[i], intgroup="pCO2.parent")
+# }
 ```
 
 
@@ -198,9 +198,9 @@ vsd <- varianceStabilizingTransformation(dds.larvae.pCO2.DESeq, blind=FALSE)
 rld <- rlog(dds.larvae.pCO2.DESeq, blind=FALSE)
 ntd <- normTransform(dds.larvae.pCO2.DESeq)
 
-meanSdPlot(assay(vsd))
-meanSdPlot(assay(ntd))
-meanSdPlot(assay(rld))
+# meanSdPlot(assay(vsd))
+# meanSdPlot(assay(ntd))
+# meanSdPlot(assay(rld))
 
 select <- order(rowMeans(counts(dds.larvae.pCO2.DESeq,normalized=TRUE)),
                 decreasing=TRUE)
@@ -254,24 +254,23 @@ plotMA(resNorm.pH, xlim=xlim, ylim=ylim, main="normal")
 plotMA(resAsh.pH, xlim=xlim, ylim=ylim, main="ashr")
 
 pH.p05.names <-rownames(subset(res.larvae.pop.ordered, pvalue < 0.05)) #padj super high across the board - check out contigs with low pvalues instead ... 
-for (i in 1:length(pH.p05.names)) {
-          plotCounts(dds.larvae.pop.DESeq, gene=pH.p05.names[i], intgroup="population")
-}
+# for (i in 1:length(pH.p05.names)) {
+#           plotCounts(dds.larvae.pop.DESeq, gene=pH.p05.names[i], intgroup="population")
+# }
 
 vsd <- varianceStabilizingTransformation(dds.larvae.pop.DESeq, blind=FALSE)
 rld <- rlog(dds.larvae.pop.DESeq, blind=FALSE)
 ntd <- normTransform(dds.larvae.pop.DESeq)
 
-meanSdPlot(assay(vsd))
-meanSdPlot(assay(ntd))
-meanSdPlot(assay(rld))
+# meanSdPlot(assay(vsd))
+# meanSdPlot(assay(ntd))
+# meanSdPlot(assay(rld))
 
 select <- order(rowMeans(counts(dds.larvae.pop.DESeq,normalized=TRUE)),
                 decreasing=TRUE)
 pH.df <- as.data.frame(colData(dds.larvae.pop.DESeq)[,c("population")])
 pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
          cluster_cols=FALSE)
-
 
 plotPCA(vsd, intgroup=c("population"))
 plotPCA(ntd, intgroup=c("population"))

@@ -1,0 +1,171 @@
+---
+title: "QuantSeq-Initial-Look-Salmon"
+output: html_document
+---
+
+```{r}
+getwd()
+```
+
+
+### Install libraries and source scripts 
+```{r}
+library(pastecs)
+library(vegan)
+library(tidyverse)
+library(pheatmap)
+source("../references//biostats.R")
+```
+
+
+### Import counts matrix file as dataframe. 
+```{r}
+getwd()
+load("../results/txi.gen")
+```
+
+### Summarize counts
+
+```{r}
+print(paste("Number of samples:", ncol(txi.gen$counts), sep=" "))
+print(paste("Total number of genes in dataframe:", prettyNum(nrow(txi.gen$counts), big.mark = ","), sep=" "))
+print(paste("Total counts, all samples:", prettyNum(sum(colSums(txi.gen$counts)), big.mark = ","), sep=" "))
+print(paste("Counts for", colnames(txi.gen$counts), ":",  prettyNum(colSums(txi.gen$counts), big.mark = ","), sep=" "))
+```
+
+### Transpose dataframe so each row = a sample (aka "objects"), and each column = genes (aka "variables") 
+```{r}
+counts.t <- t(txi.gen$counts) #transform data to have each sample a row, each column a gene 
+```
+
+### Remove genes that don't show up in any samples (why are they here?)
+```{r}
+100*(1/nrow(counts.t)) #if just one sample had a gene, what would that % be? 12.5. Use below to drop. 
+counts.ts <- drop.var(counts.t, min.po = 13)
+print(paste("# of genes not present in samples & dropped:", ncol(counts.t) - ncol(counts.ts), sep=" "))
+ncol(counts.ts) #number of genes in dataset 
+#save(counts.ts, file = "../results/counts.ts")
+```
+
+## Use foa.plots to visualize data a bit: 
+
+In how many samples does each gene occur? 
+  - The first four plots portray the gene’ frequency of occurrence among samples in a number of different ways – either as an empirical cumulative distribution function (ECDF) of gene occurrence or as a histogram of gene occurrence. 
+
+What is the mean abundance of each gene when it occurs (not averaging zeros for samples where it is absent)? 
+  - The fifth plot is an ECDF of gene mean abundance. X-axis is samples, ranked from 1-n in terms of mean gene abundance. 
+
+Is the mean abundance of genes correlated with the number of samples they occur in? 
+  - The sixth plot is a scatter plot of frequency of occurrence against mean abundance. Is there any apparent relationship between the two? Are the widespread genes also generally more abundant? Are there many widespread genes that occur at low abundance? Conversely, are there genes much less widespread, but abundant where they occur?
+
+Is the total abundance of gene in a sample correlated with the number of gene in a sample? To answer this question, first it is instructive to look at the number of gene per sample. 
+  - The eighth plot depicts the ECDF of sample richness. Are there any interesting patterns? For example, do most samples support an average number of gene, while only a few samples supporting either very few or very many gene? Or is the pattern different?
+
+Second, what is the pattern in the distribution of sample total abundance? 
+  - The ninth plot is the ECDF of total sample abundance. How does it compare to the ECDF of sample richness?
+
+Finally, to answer the question on the relation between total abundance and number of gene/sample ...
+  - The last plot is a scatter plot of the two variables. Is there is relationship between the number of gene per sample and the total abundance? Do gene-rich samples generally have a greater total abundance of those genes as well? 
+
+```{r}
+#foa.plots(counts.ts)
+```
+
+### Generate heat map for initial inspection
+
+```{r}
+counts.ts.mat <- data.matrix(counts.ts)
+str(counts.ts.mat)
+
+pheatmap(counts.ts.mat, Rowv=NA, Colv=NA, na.rm = TRUE, hclustfun = NA, xlab = NA, show_colnames =FALSE, cluster_cols = FALSE, cluster_rows = FALSE, scale="column", kmeans_k=NA, color=c("dodgerblue3", "goldenrod1"), main = "QuantSeq Counts, Test Samples")
+```
+
+### Separate adult, juvenile, and larval samples into 3 dataframes, remove genes that aren't present in those samples
+```{r}
+counts.ts.adult <- as.data.frame(counts.ts[grepl(".adult", rownames(counts.ts)), ])
+counts.ts.juvenile <- as.data.frame(counts.ts[grepl(".juvenile", rownames(counts.ts)), ])
+counts.ts.larvae <- as.data.frame(counts.ts[grepl(".larvae", rownames(counts.ts)), ])
+counts.ts.adult[,1:3]
+counts.ts.juvenile[,1:3]
+counts.ts.larvae[,1:3]
+
+# re-drop "genes" not present, calculate the number that were dropped (i.e. which were present in other tissue sample type) 
+counts.ts.adult.s <- drop.var(counts.ts.adult , min.po = 1/3) #1/no. samples+1
+counts.ts.juvenile.s <- drop.var(counts.ts.juvenile , min.po = 1/3) #1/no. samples+1
+counts.ts.larvae.s <- drop.var(counts.ts.larvae, min.po = 1/5) #1/no. samples+1
+
+print(paste("# of genes not present in adult samples & dropped:", ncol(counts.ts.adult) - ncol(counts.ts.adult.s), sep=" "))
+print(paste("# of genes not present in juvenile samples & dropped:", ncol(counts.ts.juvenile) - ncol(counts.ts.juvenile.s), sep=" "))
+print(paste("# of genes not present in larval samples & dropped:", ncol(counts.ts.larvae) - ncol(counts.ts.larvae.s), sep=" "))
+
+#write.csv(counts.ts.adult.s, file="../results/adult.counts.csv")
+#write.csv(counts.ts.juvenile.s, file="../results/juvenile.counts.csv")
+#write.csv(counts.ts.larvae.s, file="../results/larvae.counts.csv")
+```
+
+## Drop genes with very little variability between all samples, using coefficient variation <5
+
+```{r}
+counts.ts.adult.sv <- drop.var(counts.ts.adult.s, min.cv=5) 
+ncol(counts.ts.adult.s) - ncol(counts.ts.adult.sv) #number of genes dropped due to low variance .. 181
+
+counts.ts.juvenile.sv <- drop.var(counts.ts.juvenile.s, min.cv=5) 
+ncol(counts.ts.juvenile.s) - ncol(counts.ts.juvenile.sv) #number of contigs/genes dropped due to low variance .. 195
+
+counts.ts.larvae.sv <- drop.var(counts.ts.larvae.s, min.cv=5) 
+ncol(counts.ts.larvae.s) - ncol(counts.ts.larvae.sv) #number of contigs/genes dropped due to low variance .. 3 
+
+print(paste("# of adult ctenidia genes for analysis:", ncol(counts.ts.adult.sv), sep=" ")) # 5333 in adult samples 
+print(paste("# of juvenile whole-body genes for analysis:", ncol(counts.ts.juvenile.sv), sep=" ")) # 4730 in juvenile samples 
+print(paste("# of larval whole body (pooLed) genes for analysis:", ncol(counts.ts.larvae.sv), sep=" ")) # 5452 in larval samples 
+
+
+# save(counts.ts.adult.sv, file="../results/counts.ts.adult.sv")
+# save(counts.ts.juvenile.sv, file="../results/counts.ts.juvenile.sv")
+# save(counts.ts.larvae.sv, file="../results/counts.ts.larvae.sv")
+```
+
+### Heat maps for adult, larval tissues separately 
+
+Inspect samples - should I drop any? 
+
+```{r}
+# adult
+#pdf(file="plots/heatmap-adult.pdf", width = 5.5, height = 7.5)
+pheatmap(counts.ts.adult.s, Rowv=NA, Colv=NA, na.rm = TRUE, hclustfun = NA, xlab = NA, show_colnames =FALSE, cluster_cols = FALSE, scale="column", kmeans_k=NA, color=c("dodgerblue3", "goldenrod1"), main = "QuantSeq Counts, adult Tissue")
+#dev.off()
+
+# juvenile
+#pdf(file="plots/heatmap-juvenile.pdf", width = 5.5, height = 7.5)
+pheatmap(counts.ts.juvenile.s, Rowv=NA, Colv=NA, na.rm = TRUE, hclustfun = NA, xlab = NA, show_colnames =FALSE, cluster_cols = FALSE, scale="column", kmeans_k=NA, color=c("dodgerblue3", "goldenrod1"), main = "QuantSeq Counts, Adult Tissue")
+#dev.off()
+
+# larval
+#pdf(file="plots/heatmap-larvae.pdf", width = 5.5, height = 7.5)
+pheatmap(counts.ts.larvae.s, Rowv=NA, Colv=NA, na.rm = TRUE, hclustfun = NA, xlab = NA, show_colnames =FALSE, cluster_cols = FALSE,  scale="column", kmeans_k=NA, color=c("dodgerblue3", "goldenrod1"), main = "QuantSeq Counts, Larval Tissue")
+#dev.off()
+```
+
+### Merge sample key info to count data, then sort, and generate heat map for initial inspection of adult tissue samples
+```{r}
+# order columns by count 
+countmns.adult <- colMeans(counts.ts.adult.s, na.rm=TRUE)
+counts.ts.adult.s <- counts.ts.adult.s[,order(countmns.adult)]
+
+# merge count data with sample key 
+counts.ts.adult.s.a <- merge(y=counts.ts.adult.s, x=key[c("population", "temp.parent", "pCO2.parent", "sample_stage")], by.y="row.names", by.x="sample_stage") #merge 
+counts.ts.adult.s.a[,1:10] #check out results of merge
+
+# reset row names as sample names
+rownames(counts.ts.adult.s.a) <- counts.ts.adult.s.a[,1]  
+
+# sort rows/smpls by pH
+counts.ts.adult.s.a <- with(counts.ts.adult.s.a, counts.ts.adult.s.a[order(pCO2.parent, temp.parent),]) 
+
+# extract matrix, create vector of pH 
+counts.ts.adult.s.a.mat <- data.matrix(counts.ts.adult.s.a[,-1:-4])
+pCO2 <- c("gray30", "steelblue")[counts.ts.adult.s.a$pCO2.parent]
+
+# this heat map not working 
+# pheatmap(counts.ts.adult.s.a.mat, Rowv=NA, Colv=NA, scale="column", annotation_row = pCO2, annotation_colors=c("steelblue", "gray30")) #red=low pH, blue=ambient pH genes sorted by average
+```
