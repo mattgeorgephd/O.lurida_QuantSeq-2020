@@ -1,0 +1,101 @@
+---
+title: "QuantSeq-2020-Importing-STAR"
+author: "Laura H Spencer"
+date: "5/18/2020"
+output: html_document
+---
+
+### Load libraries
+
+```{r message=FALSE, warning=FALSE, results=FALSE}
+list.of.packages <- c("tidyverse", "reshape2", "here", "plotly", "purrr") #add new libraries here 
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# Load all libraries 
+lapply(list.of.packages, FUN = function(X) {
+  do.call("require", list(X)) 
+})
+```
+
+
+
+```{r}
+sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
+          mutate_at(vars(lane, temp.parent), as.factor) %>% 
+          mutate_at(vars(RNA.conc, endpoint.RFU, bioan.mean.bp), as.numeric) %>%
+          mutate(sample_stage=paste(sample, stage, sep="_"))
+
+filenames <- data.frame(read.table("../qc-processing/STAR/test-out/countsfilenames.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
+          dplyr::rename(filename = 1, sample=2) %>% 
+          mutate_at(vars(sample), as.factor) %>% 
+          left_join(sample.info[c("sample", "sample_stage")])
+
+files <- file.path(filenames$filename) #extract vector of filenames 
+all(file.exists(files)) #easy code to check that all files exist! 
+names(files) <- filenames$sample_stage #name each filename with sample#_type
+key <- full_join(sample.info, filenames) 
+
+# save(key, file="../raw-data/key")
+```
+
+## Read in count files, selecting only the first 2 columns (1=gene ID, 2=count); rename columns 
+
+```{r}
+file_list <- vector(mode = "list", length = nrow(filenames))
+names(file_list) <- c(filenames$sample_stage)
+
+for (i in 1:nrow(filenames)) {
+    file_list[[i]] <- data.frame(read.delim(file=files[i]))[-1:-4,1:2]
+    names(file_list[[i]]) <- c("gene", filenames$sample_stage[i])
+    print(paste("Total COUNTS,", names(file_list[[i]][2]), ":", prettyNum(sum(file_list[[i]][2]), big.mark=","), sep=" "))
+    print(paste("Total GENES,", names(file_list[[i]][2]), ":", prettyNum(nrow(file_list[[i]] %>% filter(.[[2]] != 0)), big.mark=","), sep=" "))
+}
+```
+
+```{r}
+counts <- file_list %>% purrr::reduce(full_join, by = "gene") %>% column_to_rownames(var="gene") 
+```
+
+### Summarize counts across all samples  
+
+```{r}
+print(paste("Number of samples:", ncol(counts), sep=" "))
+print(paste("Total number of genes in dataframe (before filtering):", prettyNum(nrow(counts), big.mark = ","), sep=" "))
+print(paste("Total counts, all samples:", prettyNum(sum(counts), big.mark = ","), sep=" "))
+```
+
+### Transpose dataframe so each row = a sample (aka "objects"), and each column = genes (aka "variables") 
+```{r}
+counts.t <- t(counts) #transform data to have each sample a row, each column a gene 
+```
+
+### Remove genes that don't show up in any samples (why are they here?)
+```{r}
+source("../references/biostats.R")
+
+100*(1/nrow(counts.t)) #if just one sample had a gene, what would that % be? 12.5. Use below to drop. 
+counts.ts <- as.data.frame(drop.var(counts.t, min.po = ceiling(100*(1/nrow(counts.t)))))
+print(paste("# of genes not present in samples & dropped:", ncol(counts.t) - ncol(counts.ts), sep=" "))
+print(paste("# of genes remaimning:", ncol(counts.ts), sep=" "))
+```
+
+## Drop genes with very little variability between all samples, using minimum coefficient variation (min.cv)=5
+```{r}
+counts.tsv <- as.data.frame(drop.var(counts.ts, min.cv=5)) 
+print(paste("number of genes dropped due to low variance", ncol(counts.ts) - ncol(counts.tsv)))
+print(paste("# number of genes remain in dataset after filtering: ", ncol(counts.tsv))) 
+```
+
+```{r}
+for (i in (1:nrow(counts.tsv))) {
+  print(paste("Total GENES for", rownames(counts.tsv)[i], ":", prettyNum(ncol(counts.tsv[i,counts.tsv[i,]!=0]), big.mark=","), sep=" "))
+}
+
+print(paste("Total COUNTS for", rownames(counts.tsv), ":",  prettyNum(rowSums(counts.ts), big.mark = ","), sep=" "))
+barplot(rowSums(counts.tsv), main="Total counts by sample", las=2) #inspect total counts by sample
+
+#save(counts.ts, file = "../results/counts.ts")
+```
+

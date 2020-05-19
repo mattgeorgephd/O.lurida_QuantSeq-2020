@@ -14,7 +14,7 @@ library(pastecs)
 library(vegan)
 library(tidyverse)
 library(pheatmap)
-source("../references//biostats.R")
+source("../references/biostats.R")
 ```
 
 ### Import QuantSeq sample info, library/file names, and then join 
@@ -54,17 +54,33 @@ print(paste("Counts for", colnames(counts), ":",  prettyNum(colSums(counts), big
 ### Transpose dataframe so each row = a sample (aka "objects"), and each column = genes (aka "variables") 
 ```{r}
 counts.t <- t(counts) #transform data to have each sample a row, each column a gene 
-str(filenames)
 ```
 
 ### Remove genes that don't show up in any samples (why are they here?)
 ```{r}
-100*(1/nrow(counts.t)) #if just one sample had a gene, what would that % be? 12.5. Use below to drop. 
-counts.ts <- drop.var(counts.t, min.po = 13)
+ceiling(100*(1/nrow(counts.t))) #if just one sample had a gene, what would that % be? 12.5. Use below to drop. 
+counts.ts <- drop.var(counts.t, min.po = ceiling(100*(1/nrow(counts.t))))
 print(paste("# of genes not present in samples & dropped:", ncol(counts.t) - ncol(counts.ts), sep=" "))
 ncol(counts.ts) #number of contigs/genes in dataset 
 save(counts.ts, file = "../results/counts.ts")
 ```
+
+## Drop genes with very little variability between all samples, using coefficient variation <5
+
+```{r}
+counts.tsv <- data.frame(drop.var(counts.ts, min.cv=5)) 
+ncol(counts.ts) - ncol(counts.tsv) #number of genes dropped due to low variance
+print(paste("# of genes for analysis:", ncol(counts.ts), sep=" ")) 
+
+for (i in (1:nrow(counts.tsv))) {
+  print(paste("Total GENES for", rownames(counts.tsv)[i], ":", prettyNum(ncol(counts.tsv[i,counts.tsv[i,]!=0]), big.mark=","), sep=" "))
+}
+
+print(paste("Total COUNTS for", rownames(counts.tsv), ":",  prettyNum(rowSums(counts.tsv), big.mark = ","), sep=" "))
+barplot(rowSums(counts.tsv), main="Total counts by sample", las=2) #inspect total counts by sample
+
+```
+
 
 ## Use foa.plots to visualize data a bit: 
 
