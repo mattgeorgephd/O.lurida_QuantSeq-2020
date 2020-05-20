@@ -93,9 +93,10 @@ for (i in (1:nrow(counts.tsv))) {
   print(paste("Total GENES for", rownames(counts.tsv)[i], ":", prettyNum(ncol(counts.tsv[i,counts.tsv[i,]!=0]), big.mark=","), sep=" "))
 }
 
-print(paste("Total COUNTS for", rownames(counts.tsv), ":",  prettyNum(rowSums(counts.ts), big.mark = ","), sep=" "))
+print(paste("Total COUNTS for", rownames(counts.tsv), ":",  prettyNum(rowSums(counts.tsv), big.mark = ","), sep=" "))
 barplot(rowSums(counts.tsv), main="Total counts by sample", las=2) #inspect total counts by sample
 
 #save(counts.ts, file = "../results/counts.ts")
+write.csv(x = t(counts.tsv), file = "../qc-processing/STAR/testrun-counts.csv")
 ```
 
