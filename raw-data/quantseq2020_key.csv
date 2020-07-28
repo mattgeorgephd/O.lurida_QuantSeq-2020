@@ -1,0 +1,147 @@
+﻿lane,sample,RNA.conc,RNA.ng,endpoint.RFU,pcr.cycles,prep.batch,species,stage,tissue,DNA.ng,bioan.mean.bp,index.no,index.seq,population,temp.parent,pCO2.parent,larval.sample
+1,291, 158.0 ,350," 3,235 ",15,6-redo,Ostrea lurida,adult,ctenidia,3.54,NT,7035,GTTACC,Dabob Bay,10,High,NA
+1,292, 29.6 ,148," 3,253 ",15,2,Ostrea lurida,adult,ctenidia,1.32,NT,7037,TGGCGA,Dabob Bay,10,High,NA
+1,293, 39.6 ,198," 2,213 ",16,2,Ostrea lurida,adult,ctenidia,1.03,NT,7014,AATCCG,Dabob Bay,10,High,NA
+1,294, 110.0 ,350," 2,887 ",16,1,Ostrea lurida,adult,ctenidia,1.95,245,7008,TGTGCA,Dabob Bay,6,High,NA
+1,295, 34.8 ,174," 2,969 ",15,6-redo,Ostrea lurida,adult,ctenidia,3.58,NT,7050,TCGAGG,Dabob Bay,6,High,NA
+1,296, 180.0 ,350," 2,182 ",15,2,Ostrea lurida,adult,ctenidia,3.46,NT,7046,CTCCAT,Dabob Bay,6,High,NA
+1,298, 182.0 ,350," 2,873 ",15,1,Ostrea lurida,adult,ctenidia,3.08,NT,7028,GCTCGA,Dabob Bay,6,High,NA
+1,299, 50.4 ,252," 3,205 ",15,1,Ostrea lurida,adult,ctenidia,2.46,NT,7024,CCGCAA,Dabob Bay,6,High,NA
+1,301, 75.8 ,350," 3,143 ",15,1,Ostrea lurida,adult,ctenidia,2.82,NT,7025,TTTATG,Dabob Bay,10,Ambient,NA
+1,302, 62.4 ,312," 3,153 ",14,2,Ostrea lurida,adult,ctenidia,4.9,NT,7018,GTCAGG,Dabob Bay,10,Ambient,NA
+1,303, 95.2 ,350," 3,543 ",14,2,Ostrea lurida,adult,ctenidia,2.4,NT,7020,TATGTC,Dabob Bay,6,Ambient,NA
+1,304, 200.0 ,350," 2,783 ",15,1,Ostrea lurida,adult,ctenidia,2.8,NT,7027,CAAGCA,Dabob Bay,6,Ambient,NA
+1,305, 75.2 ,350," 2,668 ",16,1,Ostrea lurida,adult,ctenidia,2.96,267,7002,GATCAC,Dabob Bay,6,Ambient,NA
+1,306, 136.0 ,350," 3,323 ",15,6-redo,Ostrea lurida,adult,ctenidia,4.14,NT,7051,CACTAA,Dabob Bay,10,Ambient,NA
+1,307, 89.4 ,350," 3,322 ",15,6-redo,Ostrea lurida,adult,ctenidia,3.32,NT,7053,CGCCTG,Dabob Bay,6,Ambient,NA
+1,308, 73.6 ,350," 2,593 ",16,1,Ostrea lurida,adult,ctenidia,2.48,256,7006,GTGTAG,Dabob Bay,6,Ambient,NA
+1,309, 170.0 ,350," 2,962 ",14,2,Ostrea lurida,adult,ctenidia,1.46,NT,7023,CACACT,Dabob Bay,6,Ambient,NA
+1,311, 158.0 ,350," 2,897 ",16,1,Ostrea lurida,adult,ctenidia,3.76,262,7003,ACCAGT,Oyster Bay C1,6,High,NA
+1,312, 90.6 ,350," 3,020 ",15,1,Ostrea lurida,adult,ctenidia,1.58,NT,7032,CGAAGG,Oyster Bay C1,6,High,NA
+1,313, 72.4 ,350," 3,184 ",15,2,Ostrea lurida,adult,ctenidia,1.81,NT,7041,CTCTCG,Oyster Bay C1,6,High,NA
+1,314, 42.2 ,211," 3,803 ",17,6-redo,Ostrea lurida,adult,ctenidia,4.32,NT,7049,GTGCCA,Oyster Bay C1,6,High,NA
+1,315, 148.0 ,350," 2,991 ",15,1,Ostrea lurida,adult,ctenidia,2.32,NT,7029,GCGAAT,Oyster Bay C1,6,High,NA
+1,316, 146.0 ,350," 2,929 ",16,2,Ostrea lurida,adult,ctenidia,3.74,252,7012,ATGAAC,Oyster Bay C1,6,High,NA
+1,317, 158.0 ,350," 3,576 ",15,2,Ostrea lurida,adult,ctenidia,2.14,NT,7038,ACCGTG,Oyster Bay C1,6,High,NA
+1,318, 174.0 ,350," 3,172 ",16,1,Ostrea lurida,adult,ctenidia,4.08,262,7007,CTAGTC,Oyster Bay C1,6,High,NA
+1,319, 77.6 ,350," 3,429 ",17,6-redo,Ostrea lurida,adult,ctenidia,3.02,NT,7011,TTAACT,Oyster Bay C1,6,High,NA
+1,321, 148.0 ,350," 3,122 ",15,1,Ostrea lurida,adult,ctenidia,3.64,NT,7033,AGATAG,Oyster Bay C1,6,Ambient,NA
+1,322, 44.6 ,223," 2,540 ",16,2,Ostrea lurida,adult,ctenidia,2.7,269,7010,CGGTTA,Oyster Bay C1,6,Ambient,NA
+1,323, 102.0 ,350," 3,537 ",15,2,Ostrea lurida,adult,ctenidia,3.7,NT,7044,ACAGAT,Oyster Bay C1,6,Ambient,NA
+1,324, 172.0 ,350," 3,308 ",16,6-redo,Ostrea lurida,adult,ctenidia,2.84,NT,7009,TCAGGA,Oyster Bay C1,6,Ambient,NA
+1,325, 180.0 ,350," 4,057 ",14,1,Ostrea lurida,adult,ctenidia,2.92,NT,7016,TACCTT,Oyster Bay C1,6,Ambient,NA
+1,326, 130.0 ,350," 2,810 ",15,2,Ostrea lurida,adult,ctenidia,4.04,NT,7043,AAGACA,Oyster Bay C1,6,Ambient,NA
+1,327, 85.2 ,350," 2,973 ",15,2,Ostrea lurida,adult,ctenidia,1.97,NT,7042,TGACAC,Oyster Bay C1,6,Ambient,NA
+1,328, 156.0 ,350," 3,323 ",14,1,Ostrea lurida,adult,ctenidia,2.12,NT,7015,GGCTGC,Oyster Bay C1,6,Ambient,NA
+1,329, 162.0 ,350," 3,454 ",16,6-redo,Ostrea lurida,adult,ctenidia,5.1,NT,7045,TAGGCT,Oyster Bay C1,6,Ambient,NA
+1,331, 42.2 ,211," 3,754 ",19,6-redo,Ostrea lurida,adult,ctenidia,9.6,NT,7001,CAGCGT,Fidalgo Bay,6,High,NA
+1,332, 65.8 ,329," 3,174 ",16,6-redo ,Ostrea lurida,adult,ctenidia,2.14,NT,7047,GCATGG,Fidalgo Bay,6,High,NA
+1,333, 78.6 ,350," 3,301 ",15,1,Ostrea lurida,adult,ctenidia,2.98,NT,7034,TTGGTA,Fidalgo Bay,6,High,NA
+1,334, 64.8 ,324," 4,577 ",17,6-redo,Ostrea lurida,adult,ctenidia,3.92,NT,7048,AATAGC,Fidalgo Bay,6,High,NA
+1,335, 180.0 ,350," 2,898 ",15,1,Ostrea lurida,adult,ctenidia,2.58,NT,7036,CGCAAC,Fidalgo Bay,6,High,NA
+1,336, 94.8 ,350," 3,260 ",17,6-redo,Ostrea lurida,adult,ctenidia,4.6,NT,7052,GGTATA,Fidalgo Bay,6,High,NA
+1,337, 194.0 ,350," 3,325 ",15,2,Ostrea lurida,adult,ctenidia,4.02,NT,7040,GATTGT,Fidalgo Bay,6,High,NA
+1,338, 81.6 ,350," 3,144 ",16,1,Ostrea lurida,adult,ctenidia,2.74,269,7005,ACATTA,Fidalgo Bay,6,High,NA
+1,339, 77.2 ,350," 2,761 ",16,2,Ostrea lurida,adult,ctenidia,1.91,NT,7013,CCTAAG,Fidalgo Bay,6,High,NA
+1,341, 89.6 ,350," 3,152 ",14,2,Ostrea lurida,adult,ctenidia,1.31,NT,7022,GGAGGT,Fidalgo Bay,6,Ambient,NA
+1,342, 162.0 ,350," 3,346 ",15,1,Ostrea lurida,adult,ctenidia,1.78,NT,7026,AACGCC,Fidalgo Bay,6,Ambient,NA
+1,343, 114.0 ,350," 3,583 ",14,2,Ostrea lurida,adult,ctenidia,2.58,NT,7017,TCTTAA,Fidalgo Bay,6,Ambient,NA
+1,344, 25.0 ,125," 3,090 ",15,1,Ostrea lurida,adult,ctenidia,1.58,NT,7030,TGGATT,Fidalgo Bay,6,Ambient,NA
+1,345, 190.0 ,350," 4,129 ",14,2,Ostrea lurida,adult,ctenidia,3.5,NT,7019,ATACTG,Fidalgo Bay,6,Ambient,NA
+1,346, 43.6 ,218," 2,823 ",14,2,Ostrea lurida,adult,ctenidia,1.36,NT,7021,GAGTCC,Fidalgo Bay,6,Ambient,NA
+1,347, 69.0 ,345," 3,582 ",15,6-redo,Ostrea lurida,adult,ctenidia,4.36,NT,7031,ACCTAC,Fidalgo Bay,6,Ambient,NA
+1,348, 54.4 ,272," 2,788 ",16,1,Ostrea lurida,adult,ctenidia,3.06,265,7004,TGCACG,Fidalgo Bay,6,Ambient,NA
+1,349, 82.0 ,350," 2,825 ",15,2,Ostrea lurida,adult,ctenidia,1.9,NT,7039,CAACAG,Fidalgo Bay,6,Ambient,NA
+1,137, 99.2 ,496," 1,523 ",15,7,Ostrea lurida,juvenile,"whole body, individual",5.2,NT,7090,CCTGCT,Dabob Bay,6,Ambient,NA
+1,139, 136.0 ,500," 2,190 ",14,7,Ostrea lurida,juvenile,"whole body, individual",13.3,294,7081,GCAGCC,Dabob Bay,6,Ambient,NA
+1,140, 174.0 ,500," 2,422 ",15,7,Ostrea lurida,juvenile,"whole body, individual",7.62,314,7091,GCGCTG,Dabob Bay,6,Ambient,NA
+1,141, 190.0 ,500," 2,200 ",15,7,Ostrea lurida,juvenile,"whole body, individual",23.6,NT,7088,AGACCA,Dabob Bay,6,Ambient,NA
+1,156, 110.0 ,500," 2,301 ",16,7,Ostrea lurida,juvenile,"whole body, individual",4.32,NT,7093,TTCGAG,Fidalgo Bay,6,Ambient,NA
+1,159, 184.0 ,500," 2,490 ",16,7,Ostrea lurida,juvenile,"whole body, individual",23,283,7095,AGGCAT,Fidalgo Bay,6,Ambient,NA
+1,161, 168.0 ,500," 2,668 ",14,7,Ostrea lurida,juvenile,"whole body, individual",6.22,290,7084,AAGTGG,Fidalgo Bay,6,Ambient,NA
+1,162,164,500," 2,490 ",15,7,Ostrea lurida,juvenile,"whole body, individual",6.74,289,7080,AACAAG,Fidalgo Bay,6,Ambient,NA
+1,168, 89.0 ,445," 2,312 ",16,7,Ostrea lurida,juvenile,"whole body, individual",15.9,305,7094,AGAATC,Dabob Bay,6,High,NA
+1,169, 95.6 ,478," 1,741 ",16,7,Ostrea lurida,juvenile,"whole body, individual",3.68,310,7092,GAACCT,Dabob Bay,6,High,NA
+1,171, 146.0 ,500," 1,965 ",15,7,Ostrea lurida,juvenile,"whole body, individual",3.22,305,7085,CTCATA,Dabob Bay,6,High,NA
+1,172, 116.0 ,500," 1,269 ",15,7,Ostrea lurida,juvenile,"whole body, individual",10.6,NT,7086,CCGACC,Dabob Bay,6,High,NA
+1,181, 138.0 ,500," 2,457 ",16,7,Ostrea lurida,juvenile,"whole body, individual",2.84,280,7096,ACACGC,Fidalgo Bay,6,High,NA
+1,183, 196.0 ,500," 2,883 ",14,7,Ostrea lurida,juvenile,"whole body, individual",5.88,NT,7083,TGCTAT,Fidalgo Bay,6,High,NA
+1,184, 96.4 ,482," 2,180 ",14,7,Ostrea lurida,juvenile,"whole body, individual",6.1,NT,7082,ACTCTT,Fidalgo Bay,6,High,NA
+1,185, 102.0 ,500," 2,151 ",15,7,Ostrea lurida,juvenile,"whole body, individual",15,296,7087,GGCCAA,Fidalgo Bay,6,High,NA
+2,34, 104.0 ,350," 3,764 ",19,6-redo,Ostrea lurida,larvae,"whole body, pooled",3.8,NT,7073,GACATC,Oyster Bay C1,6,Ambient,77-A
+2,35, 94.4 ,350," 3,757 ",21,6-redo,Ostrea lurida,larvae,"whole body, pooled",0.522,NT,7075,CGTCGC,Oyster Bay C1,6,Ambient,10-A
+2,37, 74.6 ,350," 3,350 ",21,6-redo,Ostrea lurida,larvae,"whole body, pooled",5.46,NT,7076,ATGGCG,Oyster Bay C1,6,Ambient,69-A
+2,39, 89.8 ,350," 2,458 ",15,5,Ostrea lurida,larvae,"whole body, pooled",2.04,NT,7056,ATATCC,Oyster Bay C1,6,Ambient,48-A
+2,41, 108.0 ,350," 4,155 ",19,6-redo,Ostrea lurida,larvae,"whole body, pooled",6.82,NT,7068,CCAATT,Oyster Bay C1,10,High,06-A
+2,43, 156.0 ,350," 3,271 ",15,4,Ostrea lurida,larvae,"whole body, pooled",2.48,261,7050,TCGAGG,Oyster Bay C1,10,High,08-A
+2,44, 41.4 ,207," 3,749 ",21,6-redo,Ostrea lurida,larvae,"whole body, pooled",0.18,NT,7078,GCCACA,Oyster Bay C1,10,High,32-A
+2,45,25.1,125.5," 7,706 ",19,6-redo,Ostrea lurida,larvae,"whole body, pooled",4.8,NT,7077,ATTGGT,Oyster Bay C1,10,High,79-A
+2,46, 98.6 ,350," 3,782 ",19,6-redo,Ostrea lurida,larvae,"whole body, pooled",4.52,NT,7074,CGATCT,Oyster Bay C1,10,High,24-A
+2,47, 128.0 ,350," 3,035 ",16,6-redo,Ostrea lurida,larvae,"whole body, pooled",2.58,NT,7070,AACCGA,Oyster Bay C1,10,High,26-A
+2,401, 93.4 ,350, 394 ,16,5,Ostrea lurida,larvae,"whole body, pooled",1.24,325,7012,ATGAAC,Dabob Bay,10,Ambient,14-A
+2,402, 114.0 ,350," 3,246 ",16,4,Ostrea lurida,larvae,"whole body, pooled",2.76,346,7006,GTGTAG,Dabob Bay,10,Ambient,31-A
+2,403, 136.0 ,350," 3,065 ",14,5,Ostrea lurida,larvae,"whole body, pooled",4.16,NT,7032,CGAAGG,Dabob Bay,10,Ambient,75-A
+2,404, 112.0 ,350," 2,712 ",15,4,Ostrea lurida,larvae,"whole body, pooled",2.92,NT,7046,CTCCAT,Dabob Bay,10,Ambient,80-A
+2,411, 72.6 ,350," 3,563 ",16,5,Ostrea lurida,larvae,"whole body, pooled",3.08,288,7011,TTAACT,Dabob Bay,10,High,23-A
+2,412, 31.2 ,156," 3,961 ",23,6-redo,Ostrea lurida,larvae,"whole body, pooled",2.52,NT,7069,AGTTGA,Dabob Bay,10,High,27-A
+2,413, 130.0 ,350," 2,715 ",15,3,Ostrea lurida,larvae,"whole body, pooled",1.97,NT,7041,CTCTCG,Dabob Bay,10,High,58-A
+2,414, 168.0 ,350," 2,951 ",15,5,Ostrea lurida,larvae,"whole body, pooled",0.858,NT,7053,CGCCTG,Dabob Bay,10,High,60-A
+2,421, 57.6 ,288," 2,504 ",14,4,Ostrea lurida,larvae,"whole body, pooled",1.63,NT,7024,CCGCAA,Dabob Bay,6,Ambient,59-A
+2,432, 74.0 ,350," 3,961 ",23,6-redo,Ostrea lurida,larvae,"whole body, pooled",6.28,NT,7065,AAGCTC,Dabob Bay,6,High,72-A
+2,434, 162.0 ,350," 3,580 ",15,5,Ostrea lurida,larvae,"whole body, pooled",5.58,NT,7059,GGTGAG,Dabob Bay,6,High,74-A
+2,441, 16.2 ,81," 3,539 ",23,6-redo,Ostrea lurida,larvae,"whole body, pooled",0.866,NT,7061,GAAGTG,Fidalgo Bay,10,Ambient,20-A
+2,443, 60.2 ,301," 3,799 ",15,3,Ostrea lurida,larvae,"whole body, pooled",1.36,NT,7039,CAACAG,Fidalgo Bay,10,Ambient,53-A
+2,444, 70.6 ,350," 2,871 ",14,5,Ostrea lurida,larvae,"whole body, pooled",4.08,NT,7037,TGGCGA,Fidalgo Bay,10,Ambient,63-A
+2,445, 160.0 ,350," 3,349 ",15,4,Ostrea lurida,larvae,"whole body, pooled",4,NT,7049,GTGCCA,Fidalgo Bay,10,Ambient,65-A
+2,451, 68.4 ,350," 2,895 ",14,5,Ostrea lurida,larvae,"whole body, pooled",2.24,NT,7030,TGGATT,Fidalgo Bay,10,High,16-A
+2,453, 196.0 ,350," 3,270 ",14,3,Ostrea lurida,larvae,"whole body, pooled",0.968,NT,7014,AATCCG,Fidalgo Bay,10,High,36-A
+2,473, 124.0 ,350," 3,055 ",14,4,Ostrea lurida,larvae,"whole body, pooled",2.34,NT,7022,GGAGGT,Fidalgo Bay,6,High,46-A
+2,474, 77.2 ,350," 3,547 ",14,3,Ostrea lurida,larvae,"whole body, pooled",3.02,NT,7016,TACCTT,Fidalgo Bay,6,High,47-A
+2,475, 27.4 ,137," 1,939 ",14,3,Ostrea lurida,larvae,"whole body, pooled",2.44,NT,7018,GTCAGG,Fidalgo Bay,6,High,50-A
+2,476, 39.2 ,196," 2,546 ",14,4,Ostrea lurida,larvae,"whole body, pooled",4.24,NT,7019,ATACTG,Fidalgo Bay,6,High,54-A
+2,477, 164.0 ,350," 2,498 ",15,3,Ostrea lurida,larvae,"whole body, pooled",2.28,NT,7040,GATTGT,Fidalgo Bay,6,High,76-A
+2,481, 89.2 ,350," 3,547 ",15,6-redo,Ostrea lurida,larvae,"whole body, pooled",2.18,NT,7036,CGCAAC,Oyster Bay C1,10,Ambient,02-A
+2,482, 22.2 ,111," 2,830 ",14,4,Ostrea lurida,larvae,"whole body, pooled",1.42,NT,7027,CAAGCA,Oyster Bay C1,10,Ambient,04-A
+2,483, 99.0 ,350," 2,845 ",16,5,Ostrea lurida,larvae,"whole body, pooled",1.22,219,7009,TCAGGA,Oyster Bay C1,10,Ambient,03-A
+2,484, 58.4 ,292," 2,968 ",15,4,Ostrea lurida,larvae,"whole body, pooled",1.67,NT,7047,GCATGG,Oyster Bay C1,10,Ambient,09-A
+2,485, 19.1 ,95.5," 3,053 ",14,4,Ostrea lurida,larvae,"whole body, pooled",2.9,NT,7023,CACACT,Oyster Bay C1,10,Ambient,34-A
+2,487, 118.0 ,350," 2,730 ",16,4,Ostrea lurida,larvae,"whole body, pooled",1.27,290,7007,CTAGTC,Oyster Bay C1,10,Ambient,40-A
+2,488, 60.0 ,300," 3,447 ",14,4,Ostrea lurida,larvae,"whole body, pooled",3.06,NT,7028,GCTCGA,Oyster Bay C1,10,Ambient,44-A
+2,489, 68.0 ,340," 3,220 ",15,3,Ostrea lurida,larvae,"whole body, pooled",3.84,272,7038,ACCGTG,Oyster Bay C1,10,Ambient,49-A
+2,490, 186.0 ,350," 2,913 ",14,4,Ostrea lurida,larvae,"whole body, pooled",2.32,NT,7021,GAGTCC,Oyster Bay C1,10,Ambient,64-A
+2,491, 58.4 ,292," 3,545 ",15,5,Ostrea lurida,larvae,"whole body, pooled",6.64,NT,7054,AATGAA,Oyster Bay C1,10,Ambient,66-A
+2,492, 82.6 ,350," 2,747 ",15,3,Ostrea lurida,larvae,"whole body, pooled",2.02,NT,7043,AAGACA,Oyster Bay C1,10,Ambient,81-A
+2,506, 29.2 ,146," 2,556 ",15,4,Ostrea lurida,larvae,"whole body, pooled",1.63,NT,7051,CACTAA,Oyster Bay C1,10,High,62-A
+2,513, 142.0 ,350," 3,093 ",15,5,Ostrea lurida,larvae,"whole body, pooled",5.92,NT,7060,TTCCGC,Oyster Bay C1,6,Ambient,45-A
+2,521, 66.6 ,333," 4,133 ",19,6-redo,Ostrea lurida,larvae,"whole body, pooled",8.66,NT,7071,CAGATG,Oyster Bay C1,6,High,01-A
+2,522, 32.2 ,161," 2,469 ",16,3,Ostrea lurida,larvae,"whole body, pooled",2.42,NT,7002,GATCAC,Oyster Bay C1,6,High,07-A
+2,523, 71.4 ,350," 2,733 ",16,4,Ostrea lurida,larvae,"whole body, pooled",2.16,276,7005,ACATTA,Oyster Bay C1,6,High,25-A
+2,524, 63.0 ,315," 3,144 ",14,3,Ostrea lurida,larvae,"whole body, pooled",3.24,NT,7013,CCTAAG,Oyster Bay C1,6,High,28-A
+2,525, 140.0 ,350," 3,283 ",14,4,Ostrea lurida,larvae,"whole body, pooled",2.44,NT,7020,TATGTC,Oyster Bay C1,6,High,30-A
+2,526, 138.0 ,350," 3,023 ",14,3,Ostrea lurida,larvae,"whole body, pooled",2.2,NT,7017,TCTTAA,Oyster Bay C1,6,High,33-A
+2,527, 124.0 ,350," 3,100 ",15,3,Ostrea lurida,larvae,"whole body, pooled",1.42,243,7042,TGACAC,Oyster Bay C1,6,High,61-A
+2,528, 87.6 ,350," 3,299 ",14,5,Ostrea lurida,larvae,"whole body, pooled",4.48,NT,7029,GCGAAT,Oyster Bay C1,6,High,68-A
+2,529, 56.8 ,284," 4,097 ",15,5,Ostrea lurida,larvae,"whole body, pooled",2.86,NT,7057,AGTACT,Oyster Bay C1,6,High,70-A
+2,531, 95.4 ,350," 2,434 ",15,4,Ostrea lurida,larvae,"whole body, pooled",2.1,NT,7048,AATAGC,Oyster Bay C2,10,Ambient,17-A
+2,532, 93.6 ,350," 3,494 ",14,5,Ostrea lurida,larvae,"whole body, pooled",2.12,NT,7035,GTTACC,Oyster Bay C2,10,Ambient,42-A
+2,533, 6.5 ,32.6," 3,752 ",17,6-redo,Ostrea lurida,larvae,"whole body, pooled",5.36,NT,7063,ACGTCT,Oyster Bay C2,10,Ambient,56-A
+2,541, 44.4 ,222," 2,387 ",15,3,Ostrea lurida,larvae,"whole body, pooled",1.4,NT,7044,ACAGAT,Oyster Bay C2,10,High,12-A
+2,542, 32.8 ,164," 2,999 ",16,3,Ostrea lurida,larvae,"whole body, pooled",2.22,270,7004,TGCACG,Oyster Bay C2,10,High,13-A
+2,543, 162.0 ,350," 3,984 ",14,5,Ostrea lurida,larvae,"whole body, pooled",5.24,NT,7031,ACCTAC,Oyster Bay C2,10,High,43-A
+2,551, 96.4 ,350," 3,222 ",14,4,Ostrea lurida,larvae,"whole body, pooled",1.69,NT,7026,AACGCC,Oyster Bay C2,6,Ambient,35-A
+2,553, 186.0 ,350," 2,588 ",14,4,Ostrea lurida,larvae,"whole body, pooled",3.28,NT,7025,TTTATG,Oyster Bay C2,6,Ambient,55-A
+2,554, 188.0 ,350," 3,198 ",14,3,Ostrea lurida,larvae,"whole body, pooled",2.38,NT,7015,GGCTGC,Oyster Bay C2,6,Ambient,78-A
+2,561, 28.0 ,140," 4,021 ",21,6-redo,Ostrea lurida,larvae,"whole body, pooled",4.1,NT,7066,GACGAT,Oyster Bay C2,6,High,05-A
+2,562,126,350," 8,075 ",23,6-redo,Ostrea lurida,larvae,"whole body, pooled",9.88,NT,7064,CAGGAC,Oyster Bay C2,6,High,11-A
+2,563, 47.0 ,235," 3,161 ",16,6-redo,Ostrea lurida,larvae,"whole body, pooled",4.66,NT,7045,TAGGCT,Oyster Bay C2,6,High,15-A
+2,564, 152.0 ,350," 3,101 ",14,5,Ostrea lurida,larvae,"whole body, pooled",2.24,NT,7034,TTGGTA,Oyster Bay C2,6,High,52-A
+2,565, 31.2 ,156," 4,011 ",19,6-redo,Ostrea lurida,larvae,"whole body, pooled",3.2,NT,7067,TCGTTC,Oyster Bay C2,6,High,57-A
+2,571, LOW ,0," 4,588 ",23,6-redo,Ostrea lurida,larvae,"whole body, pooled",0.232,287,7072,GTAGAA,Negative control,NA,NA,NA
+2,431b, 83.0 ,350," 3,181 ",16,5,Ostrea lurida,larvae,"whole body, pooled",3.36,285,7010,CGGTTA,Dabob Bay,6,High,51-A
+2,442b, 69.8 ,349," 4,110 ",17,6-redo,Ostrea lurida,larvae,"whole body, pooled",3.2,NT,7062,CAATGC,Fidalgo Bay,10,Ambient,38-A
+2,452b, 97.2 ,350," 2,770 ",16,3,Ostrea lurida,larvae,"whole body, pooled",2.68,294,7003,ACCAGT,Fidalgo Bay,10,High,18-A
+2,461b, 84.0 ,350," 2,122 ",14,5,Ostrea lurida,larvae,"whole body, pooled",2.02,NT,7033,AGATAG,Fidalgo Bay,6,Ambient,22-A
+2,462b,106,350," 4,608 ",19,6-redo,Ostrea lurida,larvae,"whole body, pooled",8.46,NT,7001,CAGCGT,Fidalgo Bay,6,Ambient,29-A
+2,471b, 108.0 ,350," 2,470 ",15,5,Ostrea lurida,larvae,"whole body, pooled",5.2,NT,7055,ACAACG,Fidalgo Bay,6,High,19-A
+2,472b, 97.0 ,350," 2,718 ",15,5,Ostrea lurida,larvae,"whole body, pooled",2.42,NT,7052,GGTATA,Fidalgo Bay,6,High,21-A
+2,552b, 74.6 ,350," 2,970 ",15,5,Ostrea lurida,larvae,"whole body, pooled",1.84,NT,7058,ATAAGA,Oyster Bay C2,6,Ambient,41-A

@@ -1,0 +1,580 @@
+---
+title: "02-Larval-data-analysis-QuantSeq2020"
+author: "Laura H Spencer"
+date: "5/22/2020"
+output: html_document
+---
+
+```{r}
+getwd()
+```
+
+### Load libraries and source scripts 
+
+```{r, message=FALSE, warning=FALSE, results=FALSE}
+source("biostats.R")
+
+list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly") #add new libraries here 
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# Load all libraries 
+lapply(list.of.packages, FUN = function(X) {
+  do.call("require", list(X)) 
+})
+```
+
+### Load counts object 
+```{r}
+load(file = "../results/gene-counts-trans") #object = counts.t
+```
+
+### Extract larval samples only 
+```{r}
+counts.t.larvae <- as.data.frame(counts.t[grepl(".larvae", rownames(counts.t)), ])
+counts.t.larvae[,1:3]
+```
+
+### Drop genes that don't show up in any samples (why are they here?)
+```{r}
+print(paste("#if just one sample had a gene, what would that % be? ", 100*(1/nrow(counts.t.larvae))))
+counts.ts.larvae <- drop.var(counts.t.larvae, min.po = ceiling(100*(1/nrow(counts.t.larvae))))  #drop those genes that aren't present in any sample  
+print(paste("# of genes not present in samples & dropped:", ncol(counts.t) - ncol(counts.ts.larvae), sep=" "))
+```
+
+## Drop genes with very little variability between all samples, using minimum coefficient variation (min.cv)=5
+```{r}
+counts.tsv.larvae <- drop.var(counts.ts.larvae, min.cv=5) 
+print(paste("number of genes dropped due to low variance", ncol(counts.ts.larvae) - ncol(counts.tsv.larvae)))
+print(paste("# number of genes remain in dataset after filtering: ", ncol(counts.tsv.larvae))) 
+```
+
+## Use foa.plots to visualize data a bit: 
+
+### In how many samples does each gene occur? 
+  - The **first four plots portray the gene’ frequency of occurrence among samples** in a number of different ways – either as an empirical cumulative distribution function (ECDF) of gene occurrence or as a histogram of gene occurrence. 
+
+### What is the mean abundance of each gene when it occurs (not averaging zeros for samples where it is absent)? 
+  - The **fifth plot is an ECDF of gene mean abundance.** X-axis is samples, ranked from 1-n in terms of mean gene abundance. 
+  
+### Is the mean abundance of genes correlated with the number of samples they occur in? 
+  - The **sixth plot is a scatter plot of frequency of occurrence against mean abundance**. Is there any apparent relationship between the two? Are the widespread genes also generally more abundant? Are there many widespread genes that occur at low abundance? Conversely, are there genes much less widespread, but abundant where they occur?
+
+### Is the total abundance of gene in a sample correlated with the number of gene in a sample? To answer this question, first it is instructive to look at the number of gene per sample. 
+  - The **eighth plot depicts the ECDF of sample richness.** Are there any interesting patterns? For example, do most samples support an average number of gene, while only a few samples supporting either very few or very many gene? Or is the pattern different?
+
+### Second, what is the pattern in the distribution of sample total abundance? 
+  - The **ninth plot is the ECDF of total sample abundance.** How does it compare to the ECDF of sample richness?
+
+### Finally, to answer the question on the relation between total abundance and number of gene/sample ...
+  - The **last plot is a scatter plot of the two variables.** Is there is relationship between the _number of genes per sample and the total abundance?_ Do gene-rich samples generally have a greater total abundance of those genes as well? 
+
+```{r}
+# note: you'll need to press return in the console for all plots 
+foa.plots(counts.ts.larvae)
+```
+
+### Merge sample key info to count data, then sort, and generate heat map for initial inspection by treatment 
+```{r}
+# merge count data with sample key, reset row names as sample names, and arrange by infection, then temperature, then day 
+counts.tsvk.larvae <- merge(x=key, by.x="sample_stage", y=counts.tsv.larvae, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
+
+head(counts.tsvk.larvae) #check out results of merge/arrange
+counts.tsvk.larvae %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
+```
+
+### Generate heat map of counts before DESeq processing / analysis 
+
+NOTE: scale="column" b/c range of counts is so huge, so counts have been scaled 
+
+```{r}
+pheatmap(data.matrix(counts.tsvk.larvae %>% dplyr::select(starts_with("OLUR"))), Rowv=NA, Colv=NA, na.rm = TRUE, xlab = NA, 
+                     show_colnames =FALSE, cluster_cols = FALSE, cluster_rows = TRUE, 
+                     scale="column", color=c("dodgerblue3", "goldenrod1"), 
+                     main = "Oly Larvae Gene Counts", annotation_row=counts.tsvk.larvae[,c("population", "pCO2.parent")],
+         filename = "../results/heatmap-larval-counts.pdf")
+```
+
+# Analysis in DESeq2  
+
+### Reformat for DESeq, ensure correct sample order for 
+
+NOTE: It is absolutely critical that the **columns of the count matrix** and the **rows of the column data (information about samples)** are in the same order. DESeq2 will not make guesses as to which column of the count matrix belongs to which row of the column data, these must be provided to DESeq2 already in consistent order.
+
+```{r}
+all(rownames(counts.tsvk.larvae) == counts.tsvk.larvae %>% dplyr::select(starts_with("OLUR")) %>% t() %>% colnames()) #check that rownames of untransformed matrix match column names of transformed matrix. Should print 'TRUE' 
+```
+
+# Generate DESeq datasets with various treatment comparisons  
+
+```{r}
+dds.larvae <- DESeqDataSetFromMatrix(countData = counts.tsvk.larvae %>% dplyr::select(starts_with("OLUR")) %>% t(),
+                              colData = counts.tsvk.larvae[,c("population", "pCO2.parent")],
+                              design = ~ population + pCO2.parent)
+#dds.larvae$day <- factor(dds.larvae$day, levels = c("9","12", "26")) #relevel day factor 
+```
+
+### Pre-filtering - remove rows (genes) with less than a total of 10 reads (across all samples)
+
+```{r}
+keep <- rowSums(counts(dds.larvae)) >= 10
+dds.larvae <- dds.larvae[keep,]
+print(paste("# genes remaining after pre-filtering:", nrow(dds.larvae)))
+```
+
+# Visualize data via PCAs and heat maps 
+
+## Transform data 
+
+- Here we transform counts using a variance stabilizing transformation (VST), since the rlog transformation threw an error and suggested using VST.  
+- Here we use `blind=FALSE` b/c we are interested in differences explained by experimental design, and may wish to use this transformed data in downstream analyses. 
+```{r}
+vsd.larvae <- varianceStabilizingTransformation(dds.larvae, blind=FALSE)
+```
+
+## Visualize sample clustering via PCA (after transformation)
+
+NOTE: Hover over points to see the sample numbers
+
+```{r}
+# PCA with points color coded by population 
+ggplotly(plotPCA(vsd.larvae, intgroup="population") + 
+           ggtitle("PCA by population (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.larvae))), tooltip = "text")
+
+# PCA with points color coded by parental pCO2 exposure 
+ggplotly(plotPCA(vsd.larvae, intgroup="pCO2.parent") + 
+           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.larvae))), tooltip = "text")
+
+# PCA with points color coded by tissue and pco2 factors 
+ggplotly(plotPCA(vsd.larvae, intgroup=c("population","pCO2.parent")) + 
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.larvae))), tooltip = "text")
+```
+
+### Generate heat maps before & after transformation  
+
+```{r}
+# extract treatment info from VSD transformation 
+vsd.larvae.df <- as.data.frame(colData(vsd.larvae)[,c("population", "pCO2.parent")])
+
+# generate heatmap from untransformed counts 
+pheatmap(counts(dds.larvae), cluster_rows=FALSE, show_rownames=FALSE,
+         cluster_cols=T, annotation_col=vsd.larvae.df, scale = "row", main="QuantSeq, untransformed data (but scaled by rows")
+
+# generate heatmap from VSD counts 
+pheatmap(assay(vsd.larvae), cluster_rows=FALSE, show_rownames=FALSE,
+         cluster_cols=T, annotation_col=vsd.larvae.df, main = "QuantSeq, VSD-transformed")
+```
+
+### Heatmap of the sample-to-sample distances
+Another use of the transformed data is sample clustering. Here, we apply the dist function to the transpose of the transformed count matrix to get sample-to-sample distances.
+
+A heatmap of this distance matrix gives us an overview over similarities and dissimilarities between samples. We have to provide a hierarchical clustering hc to the heatmap function based on the sample distances, or else the heatmap function would calculate a clustering based on the distances between the rows/columns of the distance matrix.
+
+```{r}
+colors <- colorRampPalette(rev(brewer.pal(9, "Blues")) )(255)
+
+sampleDists <- dist(t(assay(vsd.larvae)))
+sampleDistMatrix <- as.matrix(sampleDists)
+
+# Here we show tissue type + population 
+rownames(sampleDistMatrix) <- paste(vsd.larvae$population, vsd.larvae$pCO2.parent, sep="-") #set row names 
+colnames(sampleDistMatrix) <- NULL
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+
+# Here we show tissue type + parental pco2 
+rownames(sampleDistMatrix) <- paste(vsd.larvae$population, vsd.larvae$sizeFactor, sep="-") #set row names 
+colnames(sampleDistMatrix) <- NULL
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+
+# Here we show tissue type + parental pco2 
+rownames(sampleDistMatrix) <- paste(vsd.larvae$pCO2.parent, vsd.larvae$sizeFactor, sep="-") #set row names 
+colnames(sampleDistMatrix) <- NULL
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+```
+
+## Differential Expression Analysis - multifactor design 
+
+### Run the function `DESeq` to assess differential expression 
+
+```{r}
+dds.larvae.DESeq <- DESeq(dds.larvae) 
+```
+
+### Reformat DESeqDataSet as multifactor design 
+
+IMPORTANT NOTE: DESeq provides the option to add an interaction term. So, if you'er interested in looking at the interaction between infection status & temperature, you could try the following. 
+
+`design(dds.larvae) <- formula(~ infection_status + temperature + infection_status:temperature)`
+
+Check out the DESeq manual for more info. 
+
+
+```{r}
+dds.multi.DESeq <- dds.larvae.DESeq #duplicate DESeq object for multi-factor design 
+colData(dds.multi.DESeq) # check out treatments 
+design(dds.multi.DESeq) <- formula(~ population + pCO2.parent) # define experimental design as multi-factor 
+dds.multi.DESeq <- DESeq(dds.multi.DESeq)  #re-run DESeq to update analysis for multi-factor design 
+```
+
+## Any DEGs between parental pCO2, all populations? 
+
+```{r}
+print("Comparison: parental pCO2 - All populations")
+summary(res.larvae.pco2 <- results(dds.multi.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.1))
+```
+
+## Now do comparisons of genes by parental pCO2 within populations: 
+
+```{r}
+# Now add facter that defines interaction group 
+dds.multi.DESeq$group <- factor(paste0(dds.multi.DESeq$population, dds.multi.DESeq$pCO2.parent))
+design(dds.multi.DESeq) <- ~ group 
+dds.multi.DESeq <- DESeq(dds.multi.DESeq)
+```
+
+## Extract differential expression results / comparisons among different factors 
+
+Create results objects, but summary of results are also shown
+
+NOTE: can only compare two treatments at a time
+
+```{r}
+# Here are all the possible contrasts I can make 
+levels(dds.multi.DESeq$group)
+
+print("Comparison: parental pCO2 - Fidalgo Bay")
+summary(res.larvae.FB <- results(dds.multi.DESeq, contrast=c("group", "Fidalgo BayHigh", "Fidalgo BayAmbient"), alpha=0.1))
+
+print("Comparison: parental pCO2 - Dabob Bay")
+summary(res.larvae.DB <- results(dds.multi.DESeq, contrast=c("group", "Dabob BayHigh", "Dabob BayAmbient"), alpha=0.1))
+
+print("Comparison: parental pCO2 - Oyster Bay Cohort 1")
+summary(res.larvae.OB1 <- results(dds.multi.DESeq, contrast=c("group", "Oyster Bay C1High", "Oyster Bay C1Ambient"), alpha=0.1))
+
+print("Comparison: parental pCO2 - Oyster Bay Cohort 2")
+summary(res.larvae.OB2 <- results(dds.multi.DESeq, contrast=c("group", "Oyster Bay C2High", "Oyster Bay C2Ambient"), alpha=0.1))
+```
+
+## Count # of genes diff expressed  (p-value <0.05) in each comparison 
+
+```{r}
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Fidalgo Bay larvae:",  sum(res.larvae.FB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Dabob Bay larvae:",  sum(res.larvae.DB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Oyster Bay Cohort1 larvae:",  sum(res.larvae.OB1$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Oyster Bay Cohort2 larvae:",  sum(res.larvae.OB2$padj < 0.05, na.rm=TRUE))
+```
+
+## Extract stats for significantly different genes for each comparison 
+
+```{r}
+diffex.FB <- subset(res.larvae.FB, padj < 0.05)
+diffex.DB <- subset(res.larvae.DB, padj < 0.05)
+diffex.OB1 <- subset(res.larvae.OB1, padj < 0.05)
+diffex.OB2 <- subset(res.larvae.OB2, padj < 0.05)
+```
+
+## Extract counts for differentially expressed genes for each comparison 
+
+```{r}
+diffex.FB.counts <- subset(counts(dds.multi.DESeq), rownames(dds.multi.DESeq) %in% rownames(diffex.FB)) 
+diffex.FB.counts <- diffex.FB.counts[,subset(key, stage=="larvae" & population=="Fidalgo Bay")$sample_stage]
+
+diffex.DB.counts <- subset(counts(dds.multi.DESeq), rownames(dds.multi.DESeq) %in% rownames(diffex.DB))
+diffex.DB.counts <- diffex.DB.counts[,subset(key, stage=="larvae" & population=="Dabob Bay")$sample_stage]
+
+diffex.OB1.counts <- subset(counts(dds.multi.DESeq), rownames(dds.multi.DESeq) %in% rownames(diffex.OB1))
+diffex.OB1.counts <- diffex.OB1.counts[,subset(key, stage=="larvae" & population=="Oyster Bay C1")$sample_stage]
+
+diffex.OB2.counts <- subset(counts(dds.multi.DESeq), rownames(dds.multi.DESeq) %in% rownames(diffex.OB2))
+diffex.OB2.counts <- diffex.OB2.counts[,subset(key, stage=="larvae" & population=="Oyster Bay C2")$sample_stage]
+```
+
+## START HERE 
+
+
+# generate heatmap with differentially expressed genes within FB 
+
+```{r}
+dds.larvae.df <- as.data.frame(colData(dds.larvae)[,c("population", "pCO2.parent")])
+all(colnames(diffex.FB.counts) == rownames(dds.larvae.df)) #double check that samples are still in same order 
+
+pheatmap(diffex.FB.counts, cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", main = "FB Gene Counts, all differentially expressed genes among pCO2", annotation_col=dds.larvae.df[2], color=c("dodgerblue3", "goldenrod1"))
+```
+
+# generate heatmap with differentially expressed genes within DB 
+
+```{r}
+dds.larvae.df <- as.data.frame(colData(dds.larvae)[,c("population", "pCO2.parent")])
+all(colnames(diffex.DB.counts) == rownames(dds.larvae.df)) #double check that samples are still in same order 
+
+pheatmap(diffex.DB.counts, cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", main = "DB Gene Counts, all differentially expressed genes among pCO2", annotation_col=dds.larvae.df[2], color=c("dodgerblue3", "goldenrod1"))
+```
+
+
+# generate heatmap with differentially expressed genes within OB 
+
+```{r}
+dds.larvae.df <- as.data.frame(colData(dds.larvae)[,c("population", "pCO2.parent")])
+all(colnames(diffex.OB1.counts) == rownames(dds.larvae.df)) #double check that samples are still in same order 
+
+pheatmap(diffex.OB1.counts, cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", main = "OB1 Gene Counts, all differentially expressed genes among pCO2", annotation_col=dds.larvae.df[2], color=c("dodgerblue3", "goldenrod1"))
+```
+
+
+
+
+
+
+## Merge diff expressed genes among temperature, generate heatmap with differentially expressed genes by temperature 
+
+```{r}
+diffex.temp.counts <- 
+  rbind.data.frame( 
+      diffex.ColdVSWarm.counts, 
+      diffex.ColdVSWarm.counts,
+      diffex.ColdVSWarm.counts) %>% 
+  rownames_to_column("gene") %>%
+    arrange(gene)
+
+# are there any duplicate genes? 
+diffex.temp.counts[duplicated(diffex.temp.counts$gene), ]
+
+pheatmap(diffex.temp.counts[-1], cluster_rows=F, show_rownames=FALSE, cluster_columns=TRUE, na.rm=TRUE, scale="row", main = "Crab Gene Counts, differentially expressed genes by temperature", annotation_col=dds.larvae.df[3], color=c("dodgerblue3", "goldenrod1"))
+```
+
+## Merge diff expressed genes among days, generate heatmap with differentially expressed genes by temperature 
+
+```{r}
+diffex.day.counts <- 
+  rbind.data.frame(
+      diffex.9vs26.counts,
+      diffex.9vs12.counts,
+      diffex.12vs26.counts) %>% 
+  rownames_to_column("gene") %>%
+    arrange(gene) 
+
+# are there any duplicate genes? 
+diffex.day.counts[duplicated(diffex.day.counts$gene), ]
+
+pheatmap(diffex.day.counts[-1], cluster_rows=F, show_rownames=FALSE, cluster_columns=TRUE, na.rm=TRUE, scale="row", main = "Crab Gene Counts, differentially expressed genes by temperature", annotation_col=dds.larvae.df[1], color=c("dodgerblue3", "goldenrod1"))
+```
+
+## Plot gene counts for a selection of genes 
+
+It can also be useful to examine the counts of reads for a single gene across the groups. A simple function for making this plot is **`plotCounts`, which normalizes counts by sequencing depth and adds a pseudocount of 1/2 to allow for log scale plotting.** The counts are grouped by the variables in intgroup, where more than one variable can be specified. Here we specify the gene which had the smallest p value from the results table created above. You can select the gene to plot by rowname or by numeric index.
+
+### Here we plot the top 8 genes (lowest p-values) differentially expressed between infected & uninfected crabs 
+
+```{r}
+res.all.status.ordered <- res.all.status[order(res.all.status$pvalue),]
+status.p05.names <-rownames(subset(res.all.status.ordered, pvalue < 0.05)) 
+
+#plot the 8 genes with lowest p-values 
+par(mfrow=c(3,3), mai = c(.3, .3, .1, .1), oma=c(0,0,4,0))
+for (i in 1:8) {plotCounts(dds.multi.DESeq, gene=status.p05.names[i], intgroup="infection_status")}
+mtext("Top 9 differentially expressed genes by INFECTION STATUS", side=3,  line=1, outer=TRUE)
+```
+
+### Here we plot the top 9 genes (lowest p-values) differentially expressed between temperature treatments (3 top genes per comparison)
+
+```{r}
+temperature.top9 <- c(
+rownames(diffex.ColdVSWarm[order(diffex.ColdVSWarm$padj),][1:3,]),
+rownames(diffex.AmbVSWarm[order(diffex.AmbVSWarm$padj),][1:3,]),
+rownames(diffex.ColdVSAmb[order(diffex.ColdVSAmb$padj),][1:3,]))
+
+#plot the 9 genes with lowest p-values in each of the 3 temperature comparisons 
+par(mfrow=c(3,3), mai = c(.3, .3, .1, .1), oma=c(0,0,4,0))
+for (i in 1:9) {plotCounts(dds.multi.DESeq, gene=temperature.top9[i], intgroup="temperature")}
+mtext("Top 9 differentially expressed genes by TEMPERATURE", side=3,  line=1, outer=TRUE)
+```
+
+### Here we plot the top 9 genes (lowest p-values) differentially expressed between days (3 top genes per comparison)
+
+```{r}
+day.top9 <- c(
+rownames(diffex.9vs12[order(diffex.9vs12$padj),][1:3,]),
+rownames(diffex.9vs26[order(diffex.9vs26$padj),][1:3,]),
+rownames(diffex.12vs26[order(diffex.12vs26$padj),][1:3,]))
+
+#plot the 9 genes with lowest p-values in each of the 3 day comparisons 
+par(mfrow=c(3,3), mai = c(.3, .3, .1, .1), oma=c(0,0,4,0))
+for (i in 1:9) {plotCounts(dds.multi.DESeq, gene=day.top9[i], intgroup="day")}
+mtext("Top 9 differentially expressed genes by DAY", side=3,  line=1, outer=TRUE)
+``` 
+
+# Create master dataframe of all differentially expressed genes across all comparisons 
+
+```{r}
+diffex.all.counts <- 
+  rbind.data.frame(
+    diffex.status.counts,
+    diffex.ColdVSWarm.counts,
+    diffex.AmbVSWarm.counts,
+    diffex.ColdVSAmb.counts,
+    diffex.9vs26.counts,
+    diffex.9vs12.counts,
+    diffex.12vs26.counts) %>% 
+  rownames_to_column("gene") %>%
+    arrange(gene)
+  
+# are there any duplicate genes? no. 
+diffex.all.counts[duplicated(diffex.all.counts), ]
+
+# Move first column with gene names to row names 
+diffex.all.counts <- diffex.all.counts %>% 
+  column_to_rownames("gene")
+```
+
+# Of all differentially expressed genes (all comparisons), which are the most influential of sample ordination in multivariate space? 
+
+## Run PCA on list of differentially expressed genes (across all comparisons) 
+
+NOTE: set scale=false to use a variance-covariance matrix, putting more weight on genes with higher counts. 
+
+_Notes from multivariate class notes_: 
+PCA is sensitive to the scale of measurement of the data. If all the data are not measured on the same scale, using covariance means that the result will be determined mostly by the variable with the largest values, as it will have the highest variance. Using a correlation matrix treats all variables the same (standardized to mean=0 and std. dev.=1). In prcomp(), this means specifying scale=TRUE in the function call.
+
+### Perform PCA 
+
+```{r}
+diff.pca<-FactoMineR::PCA(t(diffex.all.counts),graph=F) #note: need to transform count frame for this PCA 
+```
+
+### Scree plot shows how much variance is explained by each Principal Component (PC) Axis: 
+
+- PC Axis 1 explains 31.3% of variance  
+- PC Axis 2 explains 10.9% of variance  
+- PC Axis 3 explains 9.3% of variance   
+
+```{r}
+fviz_screeplot(diff.pca, addlabels = TRUE)
+```
+
+### Look at the relative contributions of each SAMPLE to PC axes 1, 2, and 3
+
+```{r}
+fviz_contrib(diff.pca, choice = "ind", axes = 1) + ggtitle("Contribution of samples to PC dimension #1")
+fviz_contrib(diff.pca, choice = "ind", axes = 2) + ggtitle("Contribution of samples to PC dimension #2")
+fviz_contrib(diff.pca, choice = "ind", axes = 3) + ggtitle("Contribution of samples to PC dimension #3")
+```
+
+# Plot PC scores for axis 1 ~ axis 2, by treatment 
+
+```{r}
+pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
+
+# PCA plots with samples, color coded by treatments 
+fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC2, color=infection status") 
+fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC2, color=temperature") 
+fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC2, color=day sampled")
+
+# PCA with samples + top 10 genes contributing to PC scores 
+fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
+```
+
+# Plot PC scores for axis 1 ~ axis 3, by treatment 
+
+```{r}
+pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
+
+# PCA plots with samples, color coded by treatments 
+fviz_pca_biplot(diff.pca, axes = c(1,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC3, color=infection status") 
+fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC3, color=temperature") 
+fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC3, color=day sampled")
+
+# PCA with samples + top 10 genes contributing to PC scores 
+fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
+```
+
+# Plot PC scores for axis 2 ~ axis 3, by treatment 
+
+```{r}
+pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
+
+# PCA plots with samples, color coded by treatments 
+fviz_pca_biplot(diff.pca, axes = c(2,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC2 ~ PC3, color=infection status") 
+fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC2 ~ PC3, color=temperature") 
+fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC2 ~ PC3, color=day sampled")
+
+# PCA with samples + top 10 genes contributing to PC scores 
+fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
+```
+
+## Extract PC data for genes, showing their relative contributions to PC PC Axis 1 ~ Axis 2  
+
+```{r}
+diff.pca.gene.data <- fviz_pca_var(diff.pca, axes = c(1,2), select.var = list(contrib = 100))$data 
+head(diff.pca.gene.data)
+```
+
+# Extract PC scores for each sample - are they distributed normally in multivarite space? 
+
+```{r}
+pca.sample.scores <- diff.pca$ind
+hist(unlist(as.data.frame(pca.sample.scores)[1:3], use.names=FALSE), main="Histogram of PC scores for dimensions 1, 2 & 3") #should have normal distribution for multivariate normality 
+```
+
+## Prepare data for downtream statistics (if desired) 
+
+The following creates a master dataframe from the differentially expressed genes with sample id, treatment info, and counts, in long format 
+
+# Note: instead of `data.frame(t(diffex.all.counts)) %>%` you could easily swap in `data.frame(t(counts(dds.larvae))) %>%` go generate the same dataframe, but with all genes (not just differentially expressed ones)
+
+```{r}
+counts4stats <- key %>% 
+  mutate(sample_stage=as.character(sample_stage)) %>%
+  right_join(
+    data.frame(t(diffex.all.counts)) %>% 
+  rownames_to_column("sample_stage")
+  ) %>% 
+  pivot_longer(cols=starts_with("TRINITY"), values_to = "count", names_to = "gene")
+head(counts4stats)
+```
+
+## Even more visualization 
+
+### MA-plots
+
+In DESeq2, the function plotMA shows the log2 fold changes attributable to a given variable over the mean of normalized counts for all the samples in the DESeqDataSet. Points will be colored **red if the padj<0.05**. Points which fall out of the window are plotted as open triangles pointing either up or down.
+
+```{r}
+plotMA(res.all.status, main="DEG by infection status\nLog2 fold change ~ mean of normalized counts")
+
+plotMA(res.all.ColdVSWarm, main="DEGs between Cold & Warm\nLog2 fold change ~ mean of normalized counts")
+plotMA(res.all.AmbVSWarm, main="DEGs between Ambient & Warm\nLog2 fold change ~ mean of normalized counts")
+plotMA(res.all.ColdVSAmb, main="DEGs between Ambient & Cold\nLog2 fold change ~ mean of normalized counts")
+
+plotMA(res.all.9vs26, main="DEGs between Day 9 & Day 26\nLog2 fold change ~ mean of normalized counts")
+plotMA(res.all.9vs12, main="DEGs between Day 9 & Day 12\nLog2 fold change ~ mean of normalized counts")
+plotMA(res.all.12vs26, main="DEGs between Day 12 & Day 26\nLog2 fold change ~ mean of normalized counts")
+```
+
+### You can also make MA-plots with transformations 
+
+Shrinkage of effect size (LFC estimates) is useful for visualization and ranking of genes. To shrink the LFC, we pass the dds object to the function lfcShrink. Below we specify to use the apeglm method for effect size shrinkage (Zhu, Ibrahim, and Love 2018), which improves on the previous estimator.
+
+We provide the dds object and the name or number of the coefficient we want to shrink, where the number refers to the order of the coefficient as it appears in resultsNames(dds).
+
+### Here we apply `lfcShrink()` function to the dds.multi.DESeq object, and specify `coef=2` to specify that we want to examine DEGs between infection status by each shrinkage method. 
+
+```{r}
+resultsNames(dds.multi.DESeq) # Check the order of coefficients to use in the lfcShrink function.
+# use `coef=2` to refers to infection status 
+
+# Generate MA-plots after the different effect size shrinkage methods 
+par(mfrow=c(1,3), mar=c(4,4,2,1))
+plotMA(lfcShrink(dds.multi.DESeq, coef=2, type="apeglm"),  main="apeglm")
+plotMA(lfcShrink(dds.multi.DESeq, coef=2, type="normal"), main="normal")
+plotMA(lfcShrink(dds.multi.DESeq, coef=2, type="ashr"), main="ashr")
+```
