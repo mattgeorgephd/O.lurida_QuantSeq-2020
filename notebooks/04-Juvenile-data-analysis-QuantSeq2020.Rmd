@@ -1,0 +1,425 @@
+---
+title: "04-Juvenile-data-analysis-QuantSeq2020"
+author: "Laura H Spencer"
+date: "1/24/2021"
+output: html_document
+---
+
+```{r}
+getwd()
+```
+
+### Load libraries and source scripts 
+
+```{r, message=FALSE, warning=FALSE, results=FALSE}
+source("../references/biostats.R")
+
+list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "clipr") #add new libraries here 
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# Load all libraries 
+lapply(list.of.packages, FUN = function(X) {
+  do.call("require", list(X)) 
+})
+```
+
+### Inspect total counts by sample for larval samples 
+```{r}
+load(file = "../results/gene-counts-filtered") #object = counts.filtered
+load(file="../raw-data/key")
+
+#ggplotly(
+ggplot(data = data.frame(colSums(counts.filtered)) %>% 
+                  dplyr::rename(count.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% 
+                  filter(grepl("_juvenile", sample))) +
+           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample, juvenile ctenidia tissue") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+```
+### Load transformed counts object
+
+```{r}
+load(file = "../results/gene-counts-trans") #object = counts.t
+```
+
+#### If warranted, check out sample ke  
+```{r}
+key %>% filter(stage=="juvenile") %>% select(sample, population, temp.parent, pCO2.parent)
+```
+
+
+### Extract juvenile samples only
+```{r}
+counts.t.juv <- as.data.frame(counts.t[grepl(".juvenile", rownames(counts.t)), ])
+counts.t.juv[,1:3] #take a peak at the resulting dataframe 
+```
+## Optional 
+
+### Pre-filtering - remove rows (genes) with less than a total of 10 reads (across all samples) (why?)
+
+```{r}
+keep <- colSums(counts.t.juv) >= 10
+counts.ts.juv <- counts.t.juv[,keep]
+print(paste("# genes remaining after pre-filtering:", ncol(counts.ts.juv)))
+print(paste("# of genes dropped:", ncol(counts.t.juv) - ncol(counts.ts.juv), sep=" "))
+```
+
+## Use foa.plots to visualize data a bit: 
+
+### In how many samples does each gene occur? 
+  - The **first four plots portray the gene’ frequency of occurrence among samples** in a number of different ways – either as an empirical cumulative distribution function (ECDF) of gene occurrence or as a histogram of gene occurrence. 
+
+### What is the mean abundance of each gene when it occurs (not averaging zeros for samples where it is absent)? 
+  - The **fifth plot is an ECDF of gene mean abundance.** X-axis is samples, ranked from 1-n in terms of mean gene abundance. 
+  
+### Is the mean abundance of genes correlated with the number of samples they occur in? 
+  - The **sixth plot is a scatter plot of frequency of occurrence against mean abundance**. Is there any apparent relationship between the two? Are the widespread genes also generally more abundant? Are there many widespread genes that occur at low abundance? Conversely, are there genes much less widespread, but abundant where they occur?
+
+### Is the total abundance of gene in a sample correlated with the number of gene in a sample? To answer this question, first it is instructive to look at the number of gene per sample. 
+  - The **eighth plot depicts the ECDF of sample richness.** Are there any interesting patterns? For example, do most samples support an average number of gene, while only a few samples supporting either very few or very many gene? Or is the pattern different?
+
+### Second, what is the pattern in the distribution of sample total abundance? 
+  - The **ninth plot is the ECDF of total sample abundance.** How does it compare to the ECDF of sample richness?
+
+### Finally, to answer the question on the relation between total abundance and number of gene/sample ...
+  - The **last plot is a scatter plot of the two variables.** Is there is relationship between the _number of genes per sample and the total abundance?_ Do gene-rich samples generally have a greater total abundance of those genes as well? 
+
+```{r}
+# note: you'll need to press return in the console for all plots 
+#foa.plots(counts.ts.juv)
+```
+
+### Merge sample key info to count data, then sort, and generate heat map for initial inspection by treatment 
+```{r}
+# merge count data with sample key, reset row names as sample names, and arrange by infection, then temperature, then day 
+counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
+
+head(counts.tsk.juv) #check out results of merge/arrange
+counts.tsk.juv %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
+```
+
+### Generate heat map of counts before DESeq processing / analysis 
+
+NOTE: scale="column" b/c range of counts is so huge, so counts have been scaled 
+
+```{r}
+pheatmap(data.matrix(counts.tsk.juv %>% dplyr::select(starts_with("OLUR"))), Rowv=NA, Colv=NA, na.rm = TRUE, xlab = NA, 
+                     show_colnames =FALSE, cluster_cols = FALSE, cluster_rows = TRUE, 
+                     scale="column", color=c("dodgerblue3", "goldenrod1"), 
+                     main = "Oly juvenile ctendia gene counts", annotation_row=counts.tsk.juv[,c("population", "pCO2.parent")],
+         filename = "../results/heatmap-juvenile-counts.pdf")
+```
+
+# Analysis in DESeq2  
+
+### Reformat for DESeq, ensure correct sample order for 
+
+NOTE: It is absolutely critical that the **columns of the count matrix** and the **rows of the column data (information about samples)** are in the same order. DESeq2 will not make guesses as to which column of the count matrix belongs to which row of the column data, these must be provided to DESeq2 already in consistent order.
+
+```{r}
+all(rownames(counts.tsk.juv) == counts.tsk.juv %>% dplyr::select(starts_with("OLUR")) %>% t() %>% colnames()) #check that rownames of untransformed matrix match column names of transformed matrix. Should print 'TRUE' 
+```
+
+# Generate DESeq datasets with various treatment comparisons  
+
+```{r}
+#counts.DESeq <- counts.tsk.juv[-which(rownames(counts.tsk.juv) %in% "571_larvae"), grepl("OLUR", colnames(counts.tsk.juv))] %>% t()
+#key.DESeq <- counts.tsk.juv[-which(rownames(counts.tsk.juv) %in% "571_larvae"),c("population", "pCO2.parent")] 
+
+dds.juv <- DESeqDataSetFromMatrix(countData = counts.tsk.juv[,grepl("OLUR", colnames(counts.tsk.juv))] %>% t(),
+                              colData = counts.tsk.juv[,c("population", "pCO2.parent")] ,
+                              design = ~ population + pCO2.parent)
+```
+
+# Visualize data via PCAs and heat maps 
+
+## Transform data 
+
+- Here we transform counts using a variance stabilizing transformation (VST), since the rlog transformation threw an error and suggested using VST.  
+- Here we use `blind=FALSE` b/c we are interested in differences explained by experimental design, and may wish to use this transformed data in downstream analyses. 
+```{r}
+vsd.juv <- varianceStabilizingTransformation(dds.juv, blind=FALSE)
+```
+
+## Visualize sample clustering via PCA (after transformation)
+
+NOTE: Hover over points to see the sample numbers
+
+```{r}
+# PCA with points color coded by population 
+#ggplotly(
+plotPCA(vsd.juv, intgroup="population") + 
+           ggtitle("PCA by population (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.juv)))#, tooltip = "text")
+
+# PCA with points color coded by parental pCO2 exposure 
+#ggplotly(
+plotPCA(vsd.juv, intgroup="pCO2.parent") + 
+           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.juv)))#, tooltip = "text")
+
+# PCA with points color coded by tissue and pco2 factors 
+#ggplotly(
+  plotPCA(vsd.juv, intgroup=c("population","pCO2.parent")) + 
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.juv)))#, tooltip = "text")
+```
+
+### Generate heat maps before & after transformation  
+
+```{r}
+# extract treatment info from VSD transformation 
+vsd.juv.df <- as.data.frame(colData(vsd.juv)[,c("population", "pCO2.parent")])
+
+# generate heatmap from untransformed counts 
+pheatmap(counts(dds.juv), cluster_rows=FALSE, show_rownames=FALSE, 
+         cluster_cols=T, annotation_col=vsd.juv.df, scale = "row", main="QuantSeq, untransformed data (but scaled by rows")
+
+# generate heatmap from VSD counts 
+pheatmap(assay(vsd.juv), cluster_rows=T, show_rownames=FALSE,
+         cluster_cols=T, annotation_col=vsd.juv.df, main = "QuantSeq, VSD-transformed")
+```
+
+### Heatmap of the sample-to-sample distances
+Another use of the transformed data is sample clustering. Here, we apply the dist function to the transpose of the transformed count matrix to get sample-to-sample distances.
+
+A heatmap of this distance matrix gives us an overview over similarities and dissimilarities between samples. We have to provide a hierarchical clustering hc to the heatmap function based on the sample distances, or else the heatmap function would calculate a clustering based on the distances between the rows/columns of the distance matrix.
+
+```{r}
+colors <- colorRampPalette(rev(brewer.pal(9, "Blues")) )(255)
+
+sampleDists <- dist(t(assay(vsd.juv)))
+sampleDistMatrix <- as.matrix(sampleDists)
+
+# Here we show pCO2.parent + population 
+rownames(sampleDistMatrix) <- paste(vsd.juv$population, vsd.juv$pCO2.parent, sep="-") #set row names 
+colnames(sampleDistMatrix) <- NULL
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=rev(colors), fontsize = 6)
+```
+
+## Differential Expression Analysis - multifactor design 
+
+### Run the function `DESeq` to assess differential expression 
+
+```{r}
+dds.juv.DESeq <- DESeq(dds.juv) 
+```
+
+### Check out DESeq object design and treatments 
+
+```{r}
+colData(dds.juv.DESeq) # check out treatments 
+design(dds.juv.DESeq)
+```
+
+# Juveniles: Differential Gene Expression Analysis by _parental pCO2 exposure_ (both populations combined)
+
+```{r}
+print("Comparison: parental pCO2 - All populations")
+summary(res.juv.pco2 <- results(dds.juv.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
+paste("No. of genes differentially expressed (padj<0.05) by pCO2, juvenile ctendia, comparison across both FB and DB pops:",  sum(res.juv.pco2$padj < 0.05, na.rm=TRUE))
+print(diffex.juv <- subset(res.juv.pco2, padj < 0.05)) #extract stats for genes that are diff. expressed among parental pCO2, all pops combined 
+
+diffex.juv.counts <- subset(counts(dds.juv.DESeq), rownames(dds.juv.DESeq) %in% rownames(diffex.juv)) 
+diffex.juv.counts <- diffex.juv.counts[,subset(key, stage=="juvenile")$sample_stage]
+```
+
+## Heatmap of differentially expressed genes, both populations 
+
+```{r}
+dds.juv.df <- as.data.frame(colData(dds.juv)[,c("population", "pCO2.parent")]) 
+dds.juv.df <- dds.juv.df[match(rownames(dds.juv.df), colnames(diffex.juv.counts)),]
+all(colnames(diffex.juv.counts) == rownames(dds.juv.df)) #double check that samples are still in same order 
+
+pheatmap(diffex.juv.counts, cluster_rows=T, show_rownames=T, cluster_columns=T, na.rm=TRUE, scale="row", main = "Gene Counts, all differentially expressed genes by parental pCO2, all juveniles", annotation_col=dds.juv.df[c(2)], color=rev(c("dodgerblue3", "goldenrod1")), fontsize = 7)
+```
+
+# Juveniles: Differential Gene Expression Analysis by _parental pCO2 exposure within population_ 
+
+```{r}
+# Add factor that defines interaction group 
+dds.juv.DESeq$group <- factor(paste0(dds.juv.DESeq$population, dds.juv.DESeq$pCO2.parent))
+design(dds.juv.DESeq) <- ~ group 
+dds.juv.DESeq <- DESeq(dds.juv.DESeq)
+```
+
+## Extract differential expression results / comparisons among different factors 
+
+Create results objects, but summary of results are also shown
+
+NOTE: can only compare two treatments at a time
+
+```{r}
+# Here are all the possible contrasts I can make 
+#levels(dds.multi.DESeq$group)
+
+print("Comparison: parental pCO2 - Fidalgo Bay")
+summary(res.juv.FB <- results(dds.juv.DESeq, contrast=c("group", "Fidalgo BayHigh", "Fidalgo BayAmbient"), alpha=0.05))
+
+print("Comparison: parental pCO2 - Dabob Bay")
+summary(res.juv.DB <- results(dds.juv.DESeq, contrast=c("group", "Dabob BayHigh", "Dabob BayAmbient"), alpha=0.05))
+```
+
+## Count # of genes diff expressed  (p-value <0.05) in each comparison 
+
+```{r}
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Fidalgo Bay juvenile ctenidia:",  sum(res.juv.FB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Dabob Bay juvenile ctenidia:",  sum(res.juv.DB$padj < 0.05, na.rm=TRUE))
+```
+
+## Extract stats for significantly different genes for each comparison 
+
+```{r}
+diffex.juv.FB <- subset(res.juv.FB, padj < 0.05)
+diffex.juv.DB <- subset(res.juv.DB, padj < 0.05)
+```
+
+## Extract counts for differentially expressed genes for each comparison 
+
+```{r}
+diffex.juv.FB.counts <- subset(counts(dds.juv.DESeq), rownames(dds.juv.DESeq) %in% rownames(diffex.juv.FB)) 
+diffex.juv.FB.counts <- diffex.juv.FB.counts[,subset(key, stage=="juvenile" & population=="Fidalgo Bay")$sample_stage]
+
+diffex.juv.DB.counts <- subset(counts(dds.juv.DESeq), rownames(dds.juv.DESeq) %in% rownames(diffex.juv.DB))
+diffex.juv.DB.counts <- diffex.juv.DB.counts[,subset(key, stage=="juvenile" & population=="Dabob Bay")$sample_stage]
+```
+
+# generate heatmap with differentially expressed genes within FB 
+
+```{r}
+dds.juv.df.FB <- as.data.frame(colData(dds.juv)[colData(dds.juv)$population=="Fidalgo Bay",c("population", "pCO2.parent")]) 
+dds.juv.df.FB <- dds.juv.df.FB[match(rownames(dds.juv.df.FB), colnames(diffex.juv.FB.counts)),]
+all(colnames(diffex.juv.FB.counts) == rownames(dds.juv.df.FB)) #double check that samples are still in same order 
+
+pheatmap(diffex.juv.FB.counts, cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", main = "FB Gene Counts, all differentially expressed genes among pCO2", annotation_col=dds.juv.df.FB[2], color=c("dodgerblue3", "goldenrod1"))
+```
+
+# generate heatmap with differentially expressed genes within DB 
+
+```{r}
+dds.juv.df.DB <- as.data.frame(colData(dds.juv)[colData(dds.juv)$population=="Dabob Bay",c("population", "pCO2.parent")]) 
+dds.juv.df.DB <- dds.juv.df.DB[match(rownames(dds.juv.df.DB), colnames(diffex.juv.DB.counts)),]
+all(colnames(diffex.juv.DB.counts) == rownames(dds.juv.df.DB)) #double check that samples are still in same order 
+
+pheatmap(diffex.juv.DB.counts, cluster_rows=TRUE, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", main = "DB Gene Counts, all differentially expressed genes among pCO2", annotation_col=dds.juv.df.DB[2], color=c("dodgerblue3", "goldenrod1"))
+```
+## Extract genes that are differentially expressed in Juveniles between parental pCO2 in both cohorts 
+
+```{r}
+Reduce(intersect, list(rownames(diffex.juv.FB),rownames(diffex.juv.DB)))
+```
+
+### Here we plot the 1 genes that's differentially expressed among parental pCO2 in both cohorts (OLUR_00005742)
+
+```{r}
+a <-  plotCounts(dds.juv.DESeq, gene="OLUR_00005742", intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+ggplot(a %>% rownames_to_column("sample"),
+       aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+  #geom_boxplot() +
+  geom_point(size=3, position=position_jitter(w = 0.1,h = 0)) +
+    geom_text(size=3) +
+    theme_bw() +
+    ggtitle("OLUR_00005742 (unknown function)") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~population)
+```
+
+## Plot gene counts for differentially expressed genes 
+
+It can also be useful to examine the counts of reads for a single gene across the groups. A simple function for making this plot is **`plotCounts`, which normalizes counts by sequencing depth and adds a pseudocount of 1/2 to allow for log scale plotting.** The counts are grouped by the variables in intgroup, where more than one variable can be specified. Here we specify the gene which had the smallest p value from the results table created above. You can select the gene to plot by rowname or by numeric index.
+
+### Here we plot the 37 genes differentially expressed between FB cohorts whose parents were exposed to high pCO2 and not 
+
+```{r}
+juv.FB.p05.names <-rownames(diffex.juv.FB[order(diffex.juv.FB$padj),])
+count_plots.juv.FB = list()
+#plot the 37 genes with lowest p-values
+for (i in 1:37) {
+a <-  plotCounts(dds.juv.DESeq, gene=juv.FB.p05.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+b <- ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample") %>% 
+              mutate(sample=gsub("_juvenile", "", sample)),
+       aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+  geom_point(position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text(size=3) +
+    theme_bw() +
+    ggtitle(juv.FB.p05.names[i]) +
+    theme(plot.title = element_text(hjust = 0.5, size = 6), axis.text.x = element_blank(),
+          axis.text.y = element_text(size=6),
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "none")
+count_plots.juv.FB[[i]] <- b
+}
+
+library(cowplot)
+plot_grid(plotlist=count_plots.juv.FB) #plot them in a grid 
+count_plots.juv.FB #plot them all individually 
+```
+
+### Here we plot the 39 genes differentially expressed between DABOB BAY cohorts whose parents were exposed to high pCO2 and not 
+
+```{r}
+juv.DB.p05.names <-rownames(diffex.juv.DB[order(diffex.juv.DB$padj),])
+
+count_plots.juv.DB = list()
+#plot the 39 genes with lowest p-values
+for (i in 1:39) {
+a <-  plotCounts(dds.juv.DESeq, gene=juv.DB.p05.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+b <- ggplot(subset(a, population=="Dabob Bay") %>% rownames_to_column("sample") %>% 
+              mutate(sample=gsub("_juvenile", "", sample)),
+       aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+  geom_point(position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text(size=3) +
+    theme_bw() +
+    ggtitle(juv.DB.p05.names[i]) +
+    theme(plot.title = element_text(hjust = 0.5, size = 6), axis.text.x = element_blank(),
+          axis.text.y = element_text(size=6),
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "none")
+count_plots.juv.DB[[i]] <- b
+}
+
+plot_grid(plotlist=count_plots.juv.DB) #plot them in a grid 
+count_plots.juv.DB #plot them all individually 
+```
+
+# GO Enrichment Analysis 
+
+Extract GO terms for genes that are deferentially expressed in FB
+
+```{r}
+#load(file = "../references/Olurida_gene_uniprot") #object = Olurida_gene_uniprot 
+
+# All genes in FB (background)
+res.juv.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# DEG in FB 
+diffex.juv.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+```
+
+
+Extract GO terms for genes that are deferentially expressed in DB
+
+```{r}
+#load(file = "../references/Olurida_gene_uniprot") #object = Olurida_gene_uniprot 
+
+# All genes in DB (background)
+res.juv.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# DEG in DB 
+diffex.juv.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+```
+
+- protein ubiquitination  
+- cellular protein localization  
+- protein K48-linked ubiquitination  
+- protein ubiquitination involved in ubiquitin-dependent protein catabolic process  
+- protein K63-linked ubiquitination  
+- proteasomal protein catabolic process  

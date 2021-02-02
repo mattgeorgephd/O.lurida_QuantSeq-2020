@@ -1,0 +1,39 @@
+---
+title: "05-Stage-integration-QuantSeq2020"
+author: "Laura H Spencer"
+date: "1/25/2021"
+output: html_document
+---
+
+
+```{r}
+Reduce(intersect, list(rownames(diffex.juv.FB),rownames(diffex.larvae.FB)))
+Reduce(intersect, list(rownames(diffex.juv),rownames(diffex.larvae.FB)))
+```
+
+## Any genes that are Diff. Exp. between cohorts the same? 
+
+```{r}
+# Genes diff expressed across all populations, all comparisons 
+Reduce(intersect, list(rownames(diffex.larvae.DBFB),
+                       rownames(diffex.larvae.DBOB1),
+                       rownames(diffex.larvae.DBOB2),
+                       rownames(diffex.larvae.FBOB1),
+                       rownames(diffex.larvae.FBOB2)))
+
+
+```
+
+### Plot the gene that's diff across all pops 
+
+```{r}
+a <-  plotCounts(dds.larvae.DESeq, gene="OLUR_00023802", intgroup=c("population"), returnData = TRUE)
+
+ggplot(a %>% rownames_to_column("sample"),
+       aes(x=population, y=count, color=population, label=sample)) +
+  geom_point(position=position_jitter(w = 0.1,h = 0)) +
+    geom_text() +
+    theme_bw() +
+    ggtitle("OLUR_00023802") +
+    theme(plot.title = element_text(hjust = 0.5))
+```

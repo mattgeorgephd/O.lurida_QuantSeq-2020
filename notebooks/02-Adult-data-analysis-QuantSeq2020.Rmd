@@ -1,0 +1,331 @@
+---
+title: "03-Adult-data-analysis-QuantSeq2020"
+author: "Laura H Spencer"
+date: "1/24/2021"
+output: html_document
+---
+
+```{r}
+getwd()
+```
+
+### Load libraries and source scripts 
+
+```{r, message=FALSE, warning=FALSE, results=FALSE}
+source("../references/biostats.R")
+
+list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly") #add new libraries here 
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# Load all libraries 
+lapply(list.of.packages, FUN = function(X) {
+  do.call("require", list(X)) 
+})
+```
+
+### Inspect total counts by sample for larval samples 
+```{r}
+load(file = "../results/gene-counts-filtered") #object = counts.filtered
+
+#ggplotly(
+ggplot(data = data.frame(colSums(counts.filtered)) %>% 
+                  dplyr::rename(count.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% 
+                  filter(grepl("_adult", sample))) +
+           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample, adult ctenidia tissue") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+```
+### Load transformed counts object
+
+```{r}
+load(file = "../results/gene-counts-trans") #object = counts.t
+```
+
+### Extract adult samples only
+```{r}
+counts.t.adult <- as.data.frame(counts.t[grepl(".adult", rownames(counts.t)), ])
+counts.t.adult[,1:3] #take a peak at the resulting dataframe 
+```
+## Optional 
+
+### Pre-filtering - remove rows (genes) with less than a total of 10 reads (across all samples) (why?)
+
+```{r}
+keep <- colSums(counts.t.adult) >= 10
+counts.ts.adult <- counts.t.adult[,keep]
+print(paste("# genes remaining after pre-filtering:", ncol(counts.ts.adult)))
+print(paste("# of genes dropped:", ncol(counts.t.adult) - ncol(counts.ts.adult), sep=" "))
+```
+### How many genes were identified in each sample?
+
+```{r}
+#ggplotly(
+ggplot(data = data.frame(rowSums(counts.t.adult != 0)) %>% 
+                  dplyr::rename(count.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% 
+                  filter(grepl("_adult", sample))) +
+           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total # genes by sample, adult ctenidia tissue") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+```
+
+
+## Use foa.plots to visualize data a bit: 
+
+### In how many samples does each gene occur? 
+  - The **first four plots portray the gene’ frequency of occurrence among samples** in a number of different ways – either as an empirical cumulative distribution function (ECDF) of gene occurrence or as a histogram of gene occurrence. 
+
+### What is the mean abundance of each gene when it occurs (not averaging zeros for samples where it is absent)? 
+  - The **fifth plot is an ECDF of gene mean abundance.** X-axis is samples, ranked from 1-n in terms of mean gene abundance. 
+  
+### Is the mean abundance of genes correlated with the number of samples they occur in? 
+  - The **sixth plot is a scatter plot of frequency of occurrence against mean abundance**. Is there any apparent relationship between the two? Are the widespread genes also generally more abundant? Are there many widespread genes that occur at low abundance? Conversely, are there genes much less widespread, but abundant where they occur?
+
+### Is the total abundance of gene in a sample correlated with the number of gene in a sample? To answer this question, first it is instructive to look at the number of gene per sample. 
+  - The **eighth plot depicts the ECDF of sample richness.** Are there any interesting patterns? For example, do most samples support an average number of gene, while only a few samples supporting either very few or very many gene? Or is the pattern different?
+
+### Second, what is the pattern in the distribution of sample total abundance? 
+  - The **ninth plot is the ECDF of total sample abundance.** How does it compare to the ECDF of sample richness?
+
+### Finally, to answer the question on the relation between total abundance and number of gene/sample ...
+  - The **last plot is a scatter plot of the two variables.** Is there is relationship between the _number of genes per sample and the total abundance?_ Do gene-rich samples generally have a greater total abundance of those genes as well? 
+
+```{r}
+# note: you'll need to press return in the console for all plots 
+#foa.plots(counts.ts.adult)
+```
+
+### Merge sample key info to count data, then sort, and generate heat map for initial inspection by treatment 
+```{r}
+# merge count data with sample key, reset row names as sample names, and arrange by infection, then temperature, then day 
+counts.tsk.adult <- merge(x=key, by.x="sample_stage", y=counts.ts.adult, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
+
+head(counts.tsk.adult) #check out results of merge/arrange
+counts.tsk.adult %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
+```
+
+### Generate heat map of counts before DESeq processing / analysis 
+
+NOTE: scale="column" b/c range of counts is so huge, so counts have been scaled 
+
+```{r}
+pheatmap(data.matrix(counts.tsk.adult %>% dplyr::select(starts_with("OLUR"))), Rowv=NA, Colv=NA, na.rm = TRUE, xlab = NA, 
+                     show_colnames =FALSE, cluster_cols = FALSE, cluster_rows = TRUE, 
+                     scale="column", color=c("dodgerblue3", "goldenrod1"), 
+                     main = "Oly adult ctendia gene counts", annotation_row=counts.tsk.adult[,c("population", "pCO2.parent")],
+         filename = "../results/heatmap-adult-counts.pdf")
+```
+
+# Analysis in DESeq2  
+
+### Reformat for DESeq, ensure correct sample order for 
+
+NOTE: It is absolutely critical that the **columns of the count matrix** and the **rows of the column data (information about samples)** are in the same order. DESeq2 will not make guesses as to which column of the count matrix belongs to which row of the column data, these must be provided to DESeq2 already in consistent order.
+
+```{r}
+all(rownames(counts.tsk.adult) == counts.tsk.adult %>% dplyr::select(starts_with("OLUR")) %>% t() %>% colnames()) #check that rownames of untransformed matrix match column names of transformed matrix. Should print 'TRUE' 
+```
+
+# Generate DESeq datasets with various treatment comparisons  
+
+```{r}
+#counts.DESeq <- counts.tsk.adult[-which(rownames(counts.tsk.adult) %in% "571_larvae"), grepl("OLUR", colnames(counts.tsk.adult))] %>% t()
+#key.DESeq <- counts.tsk.adult[-which(rownames(counts.tsk.adult) %in% "571_larvae"),c("population", "pCO2.parent")] 
+
+dds.adult <- DESeqDataSetFromMatrix(countData = counts.tsk.adult[,grepl("OLUR", colnames(counts.tsk.adult))] %>% t(),
+                              colData = counts.tsk.adult[,c("population", "pCO2.parent")] ,
+                              design = ~ population + pCO2.parent)
+```
+
+# Visualize data via PCAs and heat maps 
+
+## Transform data 
+
+- Here we transform counts using a variance stabilizing transformation (VST), since the rlog transformation threw an error and suggested using VST.  
+- Here we use `blind=FALSE` b/c we are interested in differences explained by experimental design, and may wish to use this transformed data in downstream analyses. 
+```{r}
+vsd.adult <- varianceStabilizingTransformation(dds.adult, blind=FALSE)
+```
+
+## Visualize sample clustering via PCA (after transformation)
+
+NOTE: Hover over points to see the sample numbers
+
+```{r}
+# PCA with points color coded by population 
+#ggplotly(
+  plotPCA(vsd.adult, intgroup="population") + 
+           ggtitle("PCA by population (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult)))#, tooltip = "text")
+
+# PCA with points color coded by parental pCO2 exposure 
+#ggplotly(
+  plotPCA(vsd.adult, intgroup="pCO2.parent") + 
+           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult)))#, tooltip = "text")
+
+# PCA with points color coded by tissue and pco2 factors 
+#ggplotly(
+  plotPCA(vsd.adult, intgroup=c("population","pCO2.parent")) + 
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult)))#, tooltip = "text")
+```
+
+### Generate heat maps before & after transformation  
+
+```{r}
+# extract treatment info from VSD transformation 
+#vsd.adult.df <- as.data.frame(colData(vsd.adult)[,c("population", "pCO2.parent")])
+
+# generate heatmap from untransformed counts 
+#pheatmap(counts(dds.adult), cluster_rows=FALSE, show_rownames=FALSE,
+#         cluster_cols=T, annotation_col=vsd.adult.df, scale = "row", main="QuantSeq, untransformed data (but scaled by rows")
+
+# generate heatmap from VSD counts 
+#pheatmap(assay(vsd.adult), cluster_rows=FALSE, show_rownames=FALSE,
+#         cluster_cols=T, annotation_col=vsd.adult.df, main = "QuantSeq, VSD-transformed")
+```
+
+### Heatmap of the sample-to-sample distances
+Another use of the transformed data is sample clustering. Here, we apply the dist function to the transpose of the transformed count matrix to get sample-to-sample distances.
+
+A heatmap of this distance matrix gives us an overview over similarities and dissimilarities between samples. We have to provide a hierarchical clustering hc to the heatmap function based on the sample distances, or else the heatmap function would calculate a clustering based on the distances between the rows/columns of the distance matrix.
+
+```{r}
+colors <- colorRampPalette(rev(brewer.pal(9, "Blues")) )(255)
+
+sampleDists <- dist(t(assay(vsd.adult)))
+sampleDistMatrix <- as.matrix(sampleDists)
+
+# Here we show pCO2.parent + population 
+rownames(sampleDistMatrix) <- paste(vsd.adult$population, vsd.adult$pCO2.parent, sep="-") #set row names 
+colnames(sampleDistMatrix) <- NULL
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=rev(colors), fontsize = 6)
+```
+
+## Differential Expression Analysis - multifactor design 
+
+### Run the function `DESeq` to assess differential expression 
+
+```{r}
+dds.adult.DESeq <- DESeq(dds.adult) 
+```
+
+### Reformat DESeqDataSet as multifactor design - DO NOT NEED, REMOVE 
+
+```{r}
+dds.adult.multi.DESeq <- dds.adult.DESeq #duplicate DESeq object for multi-factor design 
+colData(dds.adult.multi.DESeq) # check out treatments 
+design(dds.adult.multi.DESeq) <- formula(~ population + pCO2.parent) # define experimental design as multi-factor 
+dds.adult.multi.DESeq <- DESeq(dds.adult.multi.DESeq)  #re-run DESeq to update analysis for multi-factor design 
+```
+
+## Any DEGs between parental pCO2, all populations? 
+
+```{r}
+print("Comparison: parental pCO2 - All populations")
+summary(res.adult.pco2 <- results(dds.adult.multi.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
+paste("No. of genes differentially expressed (padj<0.05) by pCO2, adult ctendia, comparison across all pops:",  sum(res.adult.pco2$padj < 0.05, na.rm=TRUE))
+res.adult.pco2
+```
+
+## ADD DEG COMPARISON AMONG POPULATION HERE 
+======== 
+
+
+## Now do comparisons of genes by parental pCO2 within populations: 
+
+```{r}
+# Now add factor that defines interaction group 
+dds.adult.multi.DESeq$group <- factor(paste0(dds.adult.multi.DESeq$population, dds.adult.multi.DESeq$pCO2.parent))
+design(dds.adult.multi.DESeq) <- ~ group 
+dds.adult.multi.DESeq <- DESeq(dds.adult.multi.DESeq)
+```
+
+## Extract differential expression results / comparisons among different factors 
+
+Create results objects, but summary of results are also shown
+
+NOTE: can only compare two treatments at a time
+
+```{r}
+# Here are all the possible contrasts I can make 
+levels(dds.adult.multi.DESeq$group)
+
+print("Comparison: parental pCO2 - Fidalgo Bay")
+summary(res.adult.FB <- results(dds.adult.multi.DESeq, contrast=c("group", "Fidalgo BayHigh", "Fidalgo BayAmbient"), alpha=0.05))
+
+print("Comparison: parental pCO2 - Dabob Bay")
+summary(res.adult.DB <- results(dds.adult.multi.DESeq, contrast=c("group", "Dabob BayHigh", "Dabob BayAmbient"), alpha=0.05))
+
+print("Comparison: parental pCO2 - Oyster Bay Cohort 1")
+summary(res.adult.OB1 <- results(dds.adult.multi.DESeq, contrast=c("group", "Oyster Bay C1High", "Oyster Bay C1Ambient"), alpha=0.05))
+```
+
+## Count # of genes diff expressed  (p-value <0.05) in each comparison 
+
+```{r}
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Fidalgo Bay adult ctenidia:",  sum(res.adult.FB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Dabob Bay adult ctenidia:",  sum(res.adult.DB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Oyster Bay Cohort1 adult ctenidia:",  sum(res.adult.OB1$padj < 0.05, na.rm=TRUE))
+```
+
+## Extract stats for significantly different genes for each comparison 
+
+```{r}
+diffex.adult.FB <- subset(res.adult.FB, padj < 0.05)
+diffex.adult.DB <- subset(res.adult.DB, padj < 0.05)
+diffex.adult.OB1 <- subset(res.adult.OB1, padj < 0.05)
+```
+
+## Extract counts for differentially expressed genes for each comparison 
+
+```{r}
+diffex.adult.FB.counts <- subset(counts(dds.adult.multi.DESeq), rownames(dds.adult.multi.DESeq) %in% rownames(diffex.adult.FB)) 
+diffex.adult.FB.counts <- diffex.adult.FB.counts[,subset(key, stage=="adult" & population=="Fidalgo Bay")$sample_stage]
+
+diffex.adult.DB.counts <- subset(counts(dds.adult.multi.DESeq), rownames(dds.adult.multi.DESeq) %in% rownames(diffex.adult.DB))
+diffex.adult.DB.counts <- diffex.adult.DB.counts[,subset(key, stage=="adult" & population=="Dabob Bay")$sample_stage]
+
+diffex.OB1.counts <- subset(counts(dds.adult.multi.DESeq), rownames(dds.adult.multi.DESeq) %in% rownames(diffex.adult.OB1))
+diffex.OB1.counts <- diffex.OB1.counts[,subset(key, stage=="adult" & population=="Oyster Bay C1")$sample_stage]
+```
+
+# generate heatmap with differentially expressed genes within FB 
+
+```{r}
+dds.adult.df.FB <- as.data.frame(colData(dds.adult)[colData(dds.adult)$population=="Fidalgo Bay",c("population", "pCO2.parent")])
+dds.adult.df.FB <- dds.adult.df.FB[match(colnames(diffex.adult.FB.counts), rownames(dds.adult.df.FB)),]
+all(colnames(diffex.adult.FB.counts) == rownames(dds.adult.df.FB)) #double check that samples are still in same order 
+
+pheatmap(diffex.adult.FB.counts, cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, 
+         scale="row", main = "FB DEGs by pCO2 exposure, clustered", 
+         annotation_col=dds.adult.df.FB[2], color=c("dodgerblue3", "goldenrod1"))
+
+# sort genes (rows) by p-value 
+pheatmap(diffex.adult.FB.counts[rownames(diffex.adult.FB[order(diffex.adult.FB$padj),]),], 
+         cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, 
+         scale="row", main = "FB DEGs by pCO2 exposure, sorted by p-value", 
+         annotation_col=dds.adult.df.FB[2], color=c("dodgerblue3", "goldenrod1"))
+```
+
+# generate heatmap with differentially expressed genes within DB
+
+```{r}
+dds.adult.df.DB <- as.data.frame(colData(dds.adult)[colData(dds.adult)$population=="Dabob Bay",c("population", "pCO2.parent")])
+dds.adult.df.DB <- dds.adult.df.DB[match(colnames(diffex.adult.DB.counts), rownames(dds.adult.df.DB)),]
+all(colnames(diffex.adult.DB.counts) == rownames(dds.adult.df.DB)) #double check that samples are still in same order 
+
+pheatmap(diffex.adult.DB.counts, cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", 
+         main = "DB DEGs by pCO2 exposure, clustered", annotation_col=dds.adult.df.DB[2], 
+         color=c("dodgerblue3", "goldenrod1"))
+
+pheatmap(diffex.adult.DB.counts[rownames(diffex.adult.DB[order(diffex.adult.DB$padj),]),], 
+         cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", 
+         main = "DB DEGs by pCO2 exposure, ordered by p-value", annotation_col=dds.adult.df.DB[2], 
+         color=c("dodgerblue3", "goldenrod1"))
+```
+
+
+
