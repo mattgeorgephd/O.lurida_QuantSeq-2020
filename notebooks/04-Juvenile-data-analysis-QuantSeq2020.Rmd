@@ -65,6 +65,18 @@ print(paste("# genes remaining after pre-filtering:", ncol(counts.ts.juv)))
 print(paste("# of genes dropped:", ncol(counts.t.juv) - ncol(counts.ts.juv), sep=" "))
 ```
 
+### How many genes were identified in each sample?
+
+```{r}
+#ggplotly(
+ggplot(data = data.frame(rowSums(counts.t.juv != 0)) %>% 
+                  dplyr::rename(count.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% 
+                  filter(grepl("_juvenile", sample))) +
+           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total # genes by sample, juvenile whole body") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+```
+
 ## Use foa.plots to visualize data a bit: 
 
 ### In how many samples does each gene occur? 
@@ -96,11 +108,11 @@ print(paste("# of genes dropped:", ncol(counts.t.juv) - ncol(counts.ts.juv), sep
 counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
   arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
 
-head(counts.tsk.juv) #check out results of merge/arrange
-counts.tsk.juv %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
+head(counts.tsk.juv[1:24]) #check out results of merge/arrange
+#counts.tsk.juv %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
 ```
 
-### Generate heat map of counts before DESeq processing / analysis 
+### Generate heat map of counts before DESeq processing / analysis, save to file 
 
 NOTE: scale="column" b/c range of counts is so huge, so counts have been scaled 
 
@@ -111,6 +123,9 @@ pheatmap(data.matrix(counts.tsk.juv %>% dplyr::select(starts_with("OLUR"))), Row
                      main = "Oly juvenile ctendia gene counts", annotation_row=counts.tsk.juv[,c("population", "pCO2.parent")],
          filename = "../results/heatmap-juvenile-counts.pdf")
 ```
+
+Resulting heat map is located in results/ directory: 
+![heatmap-juvenile-counts.pdf](https://github.com/laurahspencer/O.lurida_QuantSeq-2020/blob/master/results/heatmap-juvenile-counts.pdf)
 
 # Analysis in DESeq2  
 
@@ -353,7 +368,7 @@ count_plots.juv.FB[[i]] <- b
 
 library(cowplot)
 plot_grid(plotlist=count_plots.juv.FB) #plot them in a grid 
-count_plots.juv.FB #plot them all individually 
+#count_plots.juv.FB #plot them all individually 
 ```
 
 ### Here we plot the 39 genes differentially expressed between DABOB BAY cohorts whose parents were exposed to high pCO2 and not 
@@ -379,7 +394,7 @@ count_plots.juv.DB[[i]] <- b
 }
 
 plot_grid(plotlist=count_plots.juv.DB) #plot them in a grid 
-count_plots.juv.DB #plot them all individually 
+#count_plots.juv.DB #plot them all individually 
 ```
 
 # GO Enrichment Analysis 
@@ -387,17 +402,17 @@ count_plots.juv.DB #plot them all individually
 Extract GO terms for genes that are deferentially expressed in FB
 
 ```{r}
-#load(file = "../references/Olurida_gene_uniprot") #object = Olurida_gene_uniprot 
-
-# All genes in FB (background)
-res.juv.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
-
-# DEG in FB 
-diffex.juv.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+# load(file = "../references/Olurida_gene_uniprot") #object = Olurida_gene_uniprot 
+# 
+# # All genes in FB (background)
+# res.juv.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+#   left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+#   select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+# 
+# # DEG in FB 
+# diffex.juv.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+#   left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+#   select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 ```
 
 
@@ -407,14 +422,14 @@ Extract GO terms for genes that are deferentially expressed in DB
 #load(file = "../references/Olurida_gene_uniprot") #object = Olurida_gene_uniprot 
 
 # All genes in DB (background)
-res.juv.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
-
-# DEG in DB 
-diffex.juv.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+# res.juv.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+#   left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+#   select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+# 
+# # DEG in DB 
+# diffex.juv.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+#   left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+#   select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 ```
 
 - protein ubiquitination  
