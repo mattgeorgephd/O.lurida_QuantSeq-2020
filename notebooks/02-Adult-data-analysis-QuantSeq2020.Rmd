@@ -14,7 +14,7 @@ getwd()
 ```{r, message=FALSE, warning=FALSE, results=FALSE}
 source("../references/biostats.R")
 
-list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly") #add new libraries here 
+list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "cowplot", "clipr") #add new libraries here 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -27,14 +27,18 @@ lapply(list.of.packages, FUN = function(X) {
 ### Inspect total counts by sample for larval samples 
 ```{r}
 load(file = "../results/gene-counts-filtered") #object = counts.filtered
+load(file="../raw-data/key.filtered") #object = key
 
-#ggplotly(
-ggplot(data = data.frame(colSums(counts.filtered)) %>% 
+adult.samples <- key.filtered %>% filter(stage=="adult") %>% select(sample) %>% unlist() %>% as.vector() %>% as.character()
+
+ggplotly(
+ggplot(data = counts.filtered %>%
+         select(adult.samples) %>%
+         colSums() %>% data.frame() %>%
                   dplyr::rename(count.total = 1) %>% 
-                  rownames_to_column(var="sample") %>% 
-                  filter(grepl("_adult", sample))) +
+                  rownames_to_column(var="sample"))  +
            geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample, adult ctenidia tissue") + 
-             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()))
 ```
 ### Load transformed counts object
 
@@ -44,7 +48,7 @@ load(file = "../results/gene-counts-trans") #object = counts.t
 
 ### Extract adult samples only
 ```{r}
-counts.t.adult <- as.data.frame(counts.t[grepl(".adult", rownames(counts.t)), ])
+counts.t.adult <- as.data.frame(counts.t[adult.samples, ])
 counts.t.adult[,1:3] #take a peak at the resulting dataframe 
 ```
 ## Optional 
@@ -57,16 +61,16 @@ counts.ts.adult <- counts.t.adult[,keep]
 print(paste("# genes remaining after pre-filtering:", ncol(counts.ts.adult)))
 print(paste("# of genes dropped:", ncol(counts.t.adult) - ncol(counts.ts.adult), sep=" "))
 ```
+
 ### How many genes were identified in each sample?
 
 ```{r}
-#ggplotly(
+ggplotly(
 ggplot(data = data.frame(rowSums(counts.t.adult != 0)) %>% 
                   dplyr::rename(count.total = 1) %>% 
-                  rownames_to_column(var="sample") %>% 
-                  filter(grepl("_adult", sample))) +
+                  rownames_to_column(var="sample")) +
            geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total # genes by sample, adult ctenidia tissue") + 
-             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())) 
 ```
 
 
@@ -98,11 +102,11 @@ ggplot(data = data.frame(rowSums(counts.t.adult != 0)) %>%
 ### Merge sample key info to count data, then sort, and generate heat map for initial inspection by treatment 
 ```{r}
 # merge count data with sample key, reset row names as sample names, and arrange by infection, then temperature, then day 
-counts.tsk.adult <- merge(x=key, by.x="sample_stage", y=counts.ts.adult, by.y="row.names") %>% 
-  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
+counts.tsk.adult <- merge(x=key, by.x="sample", y=counts.ts.adult, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample") 
 
-head(counts.tsk.adult) #check out results of merge/arrange
-counts.tsk.adult %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
+head(counts.tsk.adult[1:24]) #check out results of merge/arrange
+#counts.tsk.adult %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
 ```
 
 ### Generate heat map of counts before DESeq processing / analysis 
@@ -114,8 +118,11 @@ pheatmap(data.matrix(counts.tsk.adult %>% dplyr::select(starts_with("OLUR"))), R
                      show_colnames =FALSE, cluster_cols = FALSE, cluster_rows = TRUE, 
                      scale="column", color=c("dodgerblue3", "goldenrod1"), 
                      main = "Oly adult ctendia gene counts", annotation_row=counts.tsk.adult[,c("population", "pCO2.parent")],
-         filename = "../results/heatmap-adult-counts.pdf")
+         filename = "../results/heatmap-adult-counts.png")
 ```
+
+Resulting heat map is located in results/ directory: 
+![heatmap-adult-counts.png](https://github.com/laurahspencer/O.lurida_QuantSeq-2020/blob/master/results/heatmap-adult-counts.png?raw=true)
 
 # Analysis in DESeq2  
 
@@ -154,20 +161,26 @@ NOTE: Hover over points to see the sample numbers
 
 ```{r}
 # PCA with points color coded by population 
-#ggplotly(
+ggplotly(
   plotPCA(vsd.adult, intgroup="population") + 
-           ggtitle("PCA by population (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult)))#, tooltip = "text")
+           ggtitle("PCA by population (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
 
 # PCA with points color coded by parental pCO2 exposure 
-#ggplotly(
+ggplotly(
   plotPCA(vsd.adult, intgroup="pCO2.parent") + 
-           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult)))#, tooltip = "text")
+           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
 
 # PCA with points color coded by tissue and pco2 factors 
-#ggplotly(
+ggplotly(
   plotPCA(vsd.adult, intgroup=c("population","pCO2.parent")) + 
-           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult)))#, tooltip = "text")
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
+
+# PCA with same 2 colors for all populations (for prelim. results presentation)
+ggplotly(
+  plotPCA(vsd.adult, intgroup=c("population","pCO2.parent")) + 
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=4, aes(text=colnames(vsd.adult))) + scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4")), tooltip = "text")
 ```
+
 
 ### Generate heat maps before & after transformation  
 
@@ -215,32 +228,42 @@ dds.adult.DESeq <- DESeq(dds.adult)
 ### Reformat DESeqDataSet as multifactor design - DO NOT NEED, REMOVE 
 
 ```{r}
-dds.adult.multi.DESeq <- dds.adult.DESeq #duplicate DESeq object for multi-factor design 
-colData(dds.adult.multi.DESeq) # check out treatments 
-design(dds.adult.multi.DESeq) <- formula(~ population + pCO2.parent) # define experimental design as multi-factor 
-dds.adult.multi.DESeq <- DESeq(dds.adult.multi.DESeq)  #re-run DESeq to update analysis for multi-factor design 
+# dds.adult.multi.DESeq <- dds.adult.DESeq #duplicate DESeq object for multi-factor design 
+# colData(dds.adult.multi.DESeq) # check out treatments 
+# design(dds.adult.multi.DESeq) <- formula(~ population + pCO2.parent) # define experimental design as multi-factor 
+# dds.adult.multi.DESeq <- DESeq(dds.adult.multi.DESeq)  #re-run DESeq to update analysis for multi-factor design 
 ```
 
 ## Any DEGs between parental pCO2, all populations? 
 
 ```{r}
 print("Comparison: parental pCO2 - All populations")
-summary(res.adult.pco2 <- results(dds.adult.multi.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
+summary(res.adult.pco2 <- results(dds.adult.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
 paste("No. of genes differentially expressed (padj<0.05) by pCO2, adult ctendia, comparison across all pops:",  sum(res.adult.pco2$padj < 0.05, na.rm=TRUE))
 res.adult.pco2
 ```
-
-## ADD DEG COMPARISON AMONG POPULATION HERE 
-======== 
-
+Heatmap, DEGs among pCO2 exposure (not considering population)
+Not super convincing! 
+```{r}
+diffex.adult <- subset(res.adult.pco2, padj < 0.05)
+diffex.adult.counts <- subset(counts(dds.adult.DESeq), rownames(dds.adult.DESeq) %in% rownames(diffex.adult)) 
+diffex.adult.counts <- diffex.adult.FB.counts[,subset(key.filtered, stage=="adult")$sample]
+dds.adult.df <- as.data.frame(colData(dds.adult)[,c("population", "pCO2.parent")])
+dds.adult.df <- dds.adult.df[match(colnames(diffex.adult.counts), rownames(dds.adult.df)),]
+all(colnames(diffex.adult.counts) == rownames(dds.adult.df)) #double check that samples are still in same order 
+pheatmap(diffex.adult.counts[rownames(diffex.adult[order(diffex.adult$padj),]),], cluster_rows=F, 
+         show_rownames=FALSE, cluster_columns=TRUE, na.rm=TRUE, 
+         scale="row", main = "(Adults) DEGs by direct pCO2 exposure (all pops), clustered", 
+         annotation_col=dds.adult.df, color=c("dodgerblue3", "goldenrod1"))
+```
 
 ## Now do comparisons of genes by parental pCO2 within populations: 
 
 ```{r}
 # Now add factor that defines interaction group 
-dds.adult.multi.DESeq$group <- factor(paste0(dds.adult.multi.DESeq$population, dds.adult.multi.DESeq$pCO2.parent))
-design(dds.adult.multi.DESeq) <- ~ group 
-dds.adult.multi.DESeq <- DESeq(dds.adult.multi.DESeq)
+dds.adult.DESeq$group <- factor(paste0(dds.adult.DESeq$population, dds.adult.DESeq$pCO2.parent))
+design(dds.adult.DESeq) <- ~ group 
+dds.adult.grp.DESeq <- DESeq(dds.adult.DESeq)
 ```
 
 ## Extract differential expression results / comparisons among different factors 
@@ -251,16 +274,16 @@ NOTE: can only compare two treatments at a time
 
 ```{r}
 # Here are all the possible contrasts I can make 
-levels(dds.adult.multi.DESeq$group)
+levels(dds.adult.grp.DESeq$group)
 
 print("Comparison: parental pCO2 - Fidalgo Bay")
-summary(res.adult.FB <- results(dds.adult.multi.DESeq, contrast=c("group", "Fidalgo BayHigh", "Fidalgo BayAmbient"), alpha=0.05))
+summary(res.adult.FB <- results(dds.adult.grp.DESeq, contrast=c("group", "Fidalgo BayHigh", "Fidalgo BayAmbient"), alpha=0.05))
 
 print("Comparison: parental pCO2 - Dabob Bay")
-summary(res.adult.DB <- results(dds.adult.multi.DESeq, contrast=c("group", "Dabob BayHigh", "Dabob BayAmbient"), alpha=0.05))
+summary(res.adult.DB <- results(dds.adult.grp.DESeq, contrast=c("group", "Dabob BayHigh", "Dabob BayAmbient"), alpha=0.05))
 
 print("Comparison: parental pCO2 - Oyster Bay Cohort 1")
-summary(res.adult.OB1 <- results(dds.adult.multi.DESeq, contrast=c("group", "Oyster Bay C1High", "Oyster Bay C1Ambient"), alpha=0.05))
+summary(res.adult.OB1 <- results(dds.adult.grp.DESeq, contrast=c("group", "Oyster Bay C1High", "Oyster Bay C1Ambient"), alpha=0.05))
 ```
 
 ## Count # of genes diff expressed  (p-value <0.05) in each comparison 
@@ -282,14 +305,14 @@ diffex.adult.OB1 <- subset(res.adult.OB1, padj < 0.05)
 ## Extract counts for differentially expressed genes for each comparison 
 
 ```{r}
-diffex.adult.FB.counts <- subset(counts(dds.adult.multi.DESeq), rownames(dds.adult.multi.DESeq) %in% rownames(diffex.adult.FB)) 
-diffex.adult.FB.counts <- diffex.adult.FB.counts[,subset(key, stage=="adult" & population=="Fidalgo Bay")$sample_stage]
+diffex.adult.FB.counts <- subset(counts(dds.adult.grp.DESeq), rownames(dds.adult.grp.DESeq) %in% rownames(diffex.adult.FB)) 
+diffex.adult.FB.counts <- diffex.adult.FB.counts[,subset(key.filtered, stage=="adult" & population=="Fidalgo Bay")$sample]
 
-diffex.adult.DB.counts <- subset(counts(dds.adult.multi.DESeq), rownames(dds.adult.multi.DESeq) %in% rownames(diffex.adult.DB))
-diffex.adult.DB.counts <- diffex.adult.DB.counts[,subset(key, stage=="adult" & population=="Dabob Bay")$sample_stage]
+diffex.adult.DB.counts <- subset(counts(dds.adult.grp.DESeq), rownames(dds.adult.grp.DESeq) %in% rownames(diffex.adult.DB))
+diffex.adult.DB.counts <- diffex.adult.DB.counts[,subset(key.filtered, stage=="adult" & population=="Dabob Bay")$sample]
 
-diffex.OB1.counts <- subset(counts(dds.adult.multi.DESeq), rownames(dds.adult.multi.DESeq) %in% rownames(diffex.adult.OB1))
-diffex.OB1.counts <- diffex.OB1.counts[,subset(key, stage=="adult" & population=="Oyster Bay C1")$sample_stage]
+diffex.adult.OB1.counts <- subset(counts(dds.adult.grp.DESeq), rownames(dds.adult.grp.DESeq) %in% rownames(diffex.adult.OB1))
+#diffex.adult.OB1.counts <- diffex.adult.OB1.counts[,subset(key.filtered, stage=="adult" & population=="Oyster Bay C1")$sample]
 ```
 
 # generate heatmap with differentially expressed genes within FB 
@@ -300,13 +323,13 @@ dds.adult.df.FB <- dds.adult.df.FB[match(colnames(diffex.adult.FB.counts), rowna
 all(colnames(diffex.adult.FB.counts) == rownames(dds.adult.df.FB)) #double check that samples are still in same order 
 
 pheatmap(diffex.adult.FB.counts, cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, 
-         scale="row", main = "FB DEGs by pCO2 exposure, clustered", 
+         scale="row", main = "(Adults) FB DEGs by direct pCO2 exposure, clustered", 
          annotation_col=dds.adult.df.FB[2], color=c("dodgerblue3", "goldenrod1"))
 
 # sort genes (rows) by p-value 
 pheatmap(diffex.adult.FB.counts[rownames(diffex.adult.FB[order(diffex.adult.FB$padj),]),], 
          cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, 
-         scale="row", main = "FB DEGs by pCO2 exposure, sorted by p-value", 
+         scale="row", main = "(Adults) FB DEGs by direct pCO2 exposure, sorted by p-value", 
          annotation_col=dds.adult.df.FB[2], color=c("dodgerblue3", "goldenrod1"))
 ```
 
@@ -318,14 +341,130 @@ dds.adult.df.DB <- dds.adult.df.DB[match(colnames(diffex.adult.DB.counts), rowna
 all(colnames(diffex.adult.DB.counts) == rownames(dds.adult.df.DB)) #double check that samples are still in same order 
 
 pheatmap(diffex.adult.DB.counts, cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", 
-         main = "DB DEGs by pCO2 exposure, clustered", annotation_col=dds.adult.df.DB[2], 
+         main = "(Adults) DB DEGs by direct pCO2 exposure, clustered", annotation_col=dds.adult.df.DB[2], 
          color=c("dodgerblue3", "goldenrod1"))
 
 pheatmap(diffex.adult.DB.counts[rownames(diffex.adult.DB[order(diffex.adult.DB$padj),]),], 
          cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", 
-         main = "DB DEGs by pCO2 exposure, ordered by p-value", annotation_col=dds.adult.df.DB[2], 
+         main = "(Adults) DB DEGs by direct pCO2 exposure, ordered by p-value", annotation_col=dds.adult.df.DB[2], 
          color=c("dodgerblue3", "goldenrod1"))
 ```
 
+# Plot single differentially expressed genes within OB1
 
+```{r}
+diffex.adult.OB1.counts <- subset(counts(dds.adult.grp.DESeq), rownames(dds.adult.grp.DESeq) %in% rownames(diffex.adult.OB1))
+#diffex.adult.OB1.counts <- diffex.adult.OB1.counts[,subset(key.filtered, stage=="adult" & population=="Oyster Bay C1")$sample]
+
+a <-  plotCounts(dds.adult.DESeq, gene=rownames(diffex.adult.OB1.counts), intgroup=c("pCO2.parent"), returnData = TRUE)
+ggplotly(ggplot(subset(a, population!="Oyster Bay C1") %>% rownames_to_column("sample") %>% drop_na(),
+       aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+  geom_point(size=3, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text(size=3) +
+    theme_bw() +
+    ggtitle(rownames(diffex.adult.OB1.counts)) +
+    theme(plot.title = element_text(hjust = 0.5, size = 12), axis.text.x = element_blank(),
+          axis.text.y = element_text(size=6),
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "none"))
+```
+
+## Identify functions of DEGs 
+
+# IMPORTANT: the dataframe "adult.all.DEGs" contains all DEGs for each population with annotation information. These DEGs were identified for each population separately. 
+
+```{r}
+(adult.all.DEGs <- left_join(
+  rbind(as.data.frame(diffex.adult.FB) %>%
+  mutate(population="FB"),
+  as.data.frame(diffex.adult.DB) %>%
+  mutate(population="DB"),
+  as.data.frame(diffex.adult.OB1) %>%
+  mutate(population="OB1")) %>%
+  rownames_to_column(var = "Name"),
+  Olurida_gene_uniprot %>% select(contig, start, end, Name, Note, SPID),
+  by="Name"))
+```
+Any DEGs the same in multiple populations?
+
+```{r}
+Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.DB), rownames(diffex.adult.OB1))) #none 
+Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.DB))) #4 the same 
+Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.OB1))) #none
+Reduce(intersect, list(rownames(diffex.adult.DB),rownames(diffex.adult.OB1))) #none
+```
+
+What are the genes that are DEGs in both FB and DB?
+
+```{r}
+(adult.all.DEGs.common <- adult.all.DEGs %>% 
+   filter(Name %in% Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.DB)))))
+```
+
+Plot counts for the 4 DEGs common in both FB and DB 
+
+```{r}
+adult.all.DEGs.names <-adult.all.DEGs.common$Name
+
+count_plots.adult = list()
+for (i in 1:length(adult.all.DEGs.names)) {
+a <-  plotCounts(dds.adult.DESeq, gene=adult.all.DEGs.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+b <- ggplot(subset(a, population!="Oyster Bay C1") %>% rownames_to_column("sample"),
+       aes(x=population:pCO2.parent, y=count, color=population, shape=pCO2.parent, label=sample)) +
+  geom_point(size=3, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text(size=3) +
+    theme_bw() +
+    ggtitle(adult.all.DEGs.names[i]) +
+    theme(plot.title = element_text(hjust = 0.5, size = 10), axis.text.x = element_blank(),
+          axis.text.y = element_text(size=6),
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "right") +
+  scale_color_manual(values = c("#377eb8","#4daf4a"))
+count_plots.adult[[i]] <- b
+}
+plot_grid(plotlist=count_plots.adult) #plot them in a grid 
+#count_plots.juv.DB #plot them all individually 
+```
+
+Enrichment Analysis! 
+
+```{r}
+# DEG in FB 
+diffex.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# All genes in FB (background)
+res.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+```
+
+
+
+
+
+
+To copy the SPIDs 
+
+```{r}
+# FB 
+adult.all.DEGs %>% filter(population=="FB") %>%
+  select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+```
+
+Read in FB GO terms for Revigo 
+
+```{r}
+read.csv(file="../results/Adult_FB_DEGs.csv") %>% 
+  mutate(GO = strsplit(as.character(Gene.ontology.IDs), ";")) %>% 
+    unnest(GO) %>%
+select(GO) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+```
+
+
+
+
+
+
+## ADD DEG COMPARISON AMONG POPULATION HERE 
+======== 
 

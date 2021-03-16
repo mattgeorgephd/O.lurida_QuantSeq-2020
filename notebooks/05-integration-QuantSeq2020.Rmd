@@ -37,3 +37,22 @@ ggplot(a %>% rownames_to_column("sample"),
     ggtitle("OLUR_00023802") +
     theme(plot.title = element_text(hjust = 0.5))
 ```
+
+Identify functions of DEGs 
+
+```{r}
+load(file = "../references/Olurida_gene_uniprot")
+```
+
+## DEGS among pop in larvae 
+
+```{r}
+load(file="../results/degs.larvae.pops")
+
+Olurida_gene_uniprot %>% filter(Name %in% degs.pops) %>% drop_na(SPID) %>% select(SPID) %>%
+    unlist() %>% as.vector() %>% write_clip()
+
+Olurida_gene_uniprot %>% filter(Name %in% colnames(counts.t.larvae)) %>% drop_na(SPID) %>% select(SPID) %>%
+    unlist() %>% as.vector() %>% write_clip()
+```
+

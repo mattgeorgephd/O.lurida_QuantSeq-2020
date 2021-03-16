@@ -27,6 +27,11 @@ lapply(list.of.packages, FUN = function(X) {
   do.call("require", list(X)) 
 })
 
+# Need these packages for SNP assessment 
+# if (!requireNamespace("BiocManager", quietly=TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install("gdsfmt")
+# BiocManager::install("SNPRelate")
 ```
 
 ### Import QuantSeq sample info, library/file names, and then join 
@@ -34,30 +39,37 @@ lapply(list.of.packages, FUN = function(X) {
 ```{r}
 sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
           mutate_at(vars(lane, temp.parent), as.factor) %>% 
-          mutate_at(vars(RNA.conc, endpoint.RFU, bioan.mean.bp), as.numeric) %>%
+          mutate_at(vars(RNA.conc, bioan.mean.bp), funs(as.numeric)) %>%
+          mutate(sample=gsub("b", "", sample)) %>% #get rid of the few "b"'s in sample #'s (they were re-extracted)
           mutate(sample_stage=paste(sample, stage, sep="_"))
 
-filenames <- data.frame(read.table("../qc-processing/featureCounts/filenames.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
+filenames <- data.frame(read.table("../qc-processing/featureCounts/filenames-deduplicated.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
           dplyr::rename(filename = 1) %>%
           mutate(sample = as.character(gsub("_.*","", filename))) %>% 
           left_join(sample.info[c("sample", "sample_stage")])
 
 # Fill in NA value on the "Undetermined" row  
-filenames[filenames$filename == "Undetermined","sample_stage"] <- "Undetermined"
+filenames[filenames$filename == "Und","sample_stage"] <- "Undetermined"
 
 key <- full_join(sample.info, filenames)
-save(key, file="../raw-data/key")
+
+(test <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
+          select(sample, stage, population, pCO2.parent) %>% filter(stage=="juvenile") %>%
+    droplevels())
 ```
 
-### Import counts matrix file as dataframe. 
+### Import counts matrix file as dataframe, extract sample # from file/column names to simplify them 
+
 ```{r}
-counts <- data.frame(read.table("../qc-processing/featureCounts/featurecounts-gene2kbdown.Rmatrix.txt", header = T, stringsAsFactors = F, fill = FALSE)) %>%
-          column_to_rownames(var="Geneid") %>%
-          rename_all(~as.character(filenames$sample_stage))
+counts <- data.frame(read.table("../qc-processing/featureCounts/featurecounts-gene2kbdown-deduplicated.Rmatrix.txt", header = T, stringsAsFactors = F, fill = FALSE)) %>%
+          column_to_rownames(var="Geneid") 
+counts <- counts %>%
+  rename_all(~as.character(str_sub(colnames(counts),-13,-11) %>% gsub("\\.", "", .)))
+
 save(counts, file = "../results/gene-counts") #save R object with all gene counts, before filtering, removing samples, etc. 
 ```
-
 ### Summarize counts and visualize (remove last column - that's undetermined counts)
+
 ```{r}
 print(paste("Number of samples:", ncol(counts[,-ncol(counts)]), sep=" "))
 print(paste("Total number of genes in dataframe:", prettyNum(nrow(counts[,-ncol(counts)]), big.mark = ","), sep=" "))
@@ -65,9 +77,9 @@ print(paste("Total counts, all samples:", prettyNum(sum(colSums(counts[,-ncol(co
 #print(paste("Counts for", colnames(counts), ":",  prettyNum(colSums(counts), big.mark = ","), sep=" "))
 
 #inspect total counts by sample
-#ggplotly(
+ggplotly(
   ggplot(data.frame(colSums(counts[,-ncol(counts)])) %>% dplyr::rename(count.total = 1) %>% rownames_to_column(var="sample"))  + geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample") + 
-             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) #) 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())) 
 ```
 
 # Filter sample sequencing stats 
@@ -79,17 +91,17 @@ multiqc.stats <- read.delim(file="../qc-processing/fastqc/trimmed/multiqc_report
 colnames(multiqc.stats) <- gsub("FastQC_mqc.generalstats.fastqc.", "", colnames(multiqc.stats)) 
 multiqc.stats <- multiqc.stats %>% 
   mutate(total_unique = total_sequences*(100-percent_duplicates)/100) %>%
-  mutate(Sample = gsub(".trim", "", Sample)) %>% 
+  mutate(Sample = gsub(".trim", "", Sample)) %>% mutate(Sample=gsub("b", "", Sample)) %>%
   left_join(key, by=c("Sample"="sample"))
 ```
 ## Investigate possible correlations among # reads and prep stuff 
 
 No. of PCR cycles strongly correlates positively % duplicates & % fails and negatively with total unique reads, less strongly with GC content. 
 
-
 ```{r}
-cor(multiqc.stats %>%drop_na(population) %>% dplyr::select_if(is.numeric)) %>% corrplot(tl.cex=.45)
+cor(multiqc.stats %>%drop_na(population) %>% dplyr::select_if(is.numeric), use="complete.obs") %>% corrplot(tl.cex=.45)
 ```
+
 ## Look closer at pcr cycles and read stummary stats  
 
 ```{r}
@@ -126,7 +138,7 @@ multiqc.stats %>% filter(pcr.cycles<=17) %>% group_by(stage, population, pCO2.pa
 ## Check out pcr.cycles correation after removing all samples with >17 pcr cycles 
 
 ```{r}
-cor(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17) %>% dplyr::select_if(is.numeric)) %>% corrplot(tl.cex=.45)
+cor(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17) %>% dplyr::select_if(is.numeric), use="complete.obs") %>% corrplot(tl.cex=.45)
 
 chart.Correlation(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17) %>%
                     select(pcr.cycles, percent_duplicates, 
@@ -141,12 +153,14 @@ chart.Correlation(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17
 Samples 35, 412, and 44 have very low counts, similar to sample 571 which was the no-tissue control, prepared alongside larval samples. 
 
 ```{r}
-remove.list <- c("Undetermined", multiqc.stats %>% filter(pcr.cycles>17) %>% select(sample_stage) %>% unlist() %>% as.vector()) 
-counts.filtered <- counts[ , -which(names(counts) %in% remove.list)]
+remove.list <- c("Undetermined", multiqc.stats %>% filter(pcr.cycles>17) %>% select(Sample) %>% unlist() %>% as.vector()) 
+counts.filtered <- counts[ , -which(names(counts) %in% remove.list)] %>% mutate_at(vars(starts_with("feature")), as.character)
 ncol(counts.filtered)
-key <- key[ -which(key$sample_stage %in% remove.list), ]
+key <- key[ -which(key$sample %in% remove.list), ]
+
 nrow(key)
 nrow(key) == ncol(counts.filtered) #should = TRUE.
+save(key, file="../raw-data/key") #save key object. IMPORTANT: this needs to be done here AFTER filtering out whole samples 
 ```
 
 ```{r}
@@ -198,4 +212,5 @@ Olurida_gene_uniprot <- read_delim(file = here::here("references", "Olurida_v081
 
 save(Olurida_gene_uniprot, file = "../references/Olurida_gene_uniprot")
 ```
+
 

@@ -1,0 +1,28 @@
+---
+title: "05-Juvenile-Colony-kinship"
+author: "Laura H Spencer"
+date: "3/4/2021"
+output: html_document
+---
+
+```{r}
+install.packages("rcolony", repos="http://R-Forge.R-project.org")
+```
+```{r}
+library(rcolony)
+```
+
+```{r}
+help(rcolony)
+```
+
+### Build Colony input
+
+```{bash}
+mkdir ../qc-processing/colony/
+```
+
+```{r}
+build.colony.input(wd="../qc-processing/colony/")
+```
+

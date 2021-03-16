@@ -97,11 +97,13 @@ ggplot(data = data.frame(rowSums(counts.t.larvae != 0)) %>%
 ### Merge sample key info to count data, then sort, and generate heat map for initial inspection by treatment 
 ```{r}
 # merge count data with sample key, reset row names as sample names, and arrange by infection, then temperature, then day 
+load(file="../raw-data/key")
+
 counts.tsk.larvae <- merge(x=key, by.x="sample_stage", y=counts.ts.larvae, by.y="row.names") %>% 
   arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
 
-head(counts.tsk.larvae) #check out results of merge/arrange
-counts.tsk.larvae %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
+head(counts.tsk.larvae[1:24]) #check out results of merge/arrange
+#counts.tsk.larvae %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
 ```
 
 ### Generate heat map of counts before DESeq processing / analysis 
@@ -113,8 +115,11 @@ pheatmap(data.matrix(counts.tsk.larvae %>% dplyr::select(starts_with("OLUR"))), 
                      show_colnames =FALSE, cluster_cols = FALSE, cluster_rows = TRUE, 
                      scale="column", color=c("dodgerblue3", "goldenrod1"), 
                      main = "Oly Larvae Gene Counts", annotation_row=counts.tsk.larvae[,c("population", "pCO2.parent")],
-         filename = "../results/heatmap-larval-counts.pdf")
+         filename = "../results/heatmap-larval-counts.png")
 ```
+
+Resulting heat map is located in results/ directory: 
+![heatmap-larvae-counts.png](https://github.com/laurahspencer/O.lurida_QuantSeq-2020/blob/master/results/heatmap-larvae-counts.png?raw=true)
 
 # Analysis in DESeq2  
 
@@ -286,7 +291,7 @@ This PCA represents the physiological differences among populations/cohorts of O
 ```{r}
 # PCA with points color coded by tissue and pco2 factors 
 #ggplotly(
-  plotPCA(vsd.larvae[degs.pops,], intgroup=c("population")) + 
+  plotPCA(vsd.larvae[degs.larvae.pops,], intgroup=c("population")) + 
            ggtitle("Larval PCA by population, DEGs (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.larvae)))#, tooltip = "text")
 ```
 
@@ -294,7 +299,7 @@ This PCA represents the physiological differences among populations/cohorts of O
 # generate heatmap of population DEGs  
 vsd.larvae.df <- as.data.frame(colData(vsd.larvae)[,c("population", "pCO2.parent")])
 
-pheatmap(assay(vsd.larvae[degs.pops,]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
+pheatmap(assay(vsd.larvae[degs.larvae.pops,]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
          cluster_cols=T, annotation_col=vsd.larvae.df[1], scale="row", main = "DEGs among populations")
 ```
 
@@ -360,14 +365,15 @@ It can also be useful to examine the counts of reads for a single gene across th
 ### Here we plot the genes differentially expressed in FB between parental pCO2 exposure  
 
 ```{r}
-a <-  plotCounts(dds.larvae.DESeq, gene=larvae.FB.p05.names, intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+
+a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.FB), intgroup=c("population", "pCO2.parent"), returnData = TRUE)
 
 ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
        aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
   geom_point(position=position_jitter(w = 0.1,h = 0)) +
     geom_text() +
     theme_bw() +
-    ggtitle(larvae.FB.p05.names) +
+    ggtitle(rownames(diffex.larvae.FB)) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
 
@@ -377,6 +383,7 @@ ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
 
 
 
+====== 
 
 # BONEYARD - not necessary due to low DEGs 
 
@@ -458,34 +465,34 @@ ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
 
 
 
-# BONEYARD, OR TBD ANALYSIS DEVELOPED DURING CRAB ANALYSIS / PILOT STUDY 
+# MORE BONEYARD, OR TBD ANALYSIS DEVELOPED DURING CRAB ANALYSIS / PILOT STUDY 
 
 
 
 # Create master dataframe of all differentially expressed genes across all comparisons 
 
 ```{r}
-diffex.all.counts <- 
-  rbind.data.frame(
-    diffex.status.counts,
-    diffex.ColdVSWarm.counts,
-    diffex.AmbVSWarm.counts,
-    diffex.ColdVSAmb.counts,
-    diffex.9vs26.counts,
-    diffex.9vs12.counts,
-    diffex.12vs26.counts) %>% 
-  rownames_to_column("gene") %>%
-    arrange(gene)
-  
-# are there any duplicate genes? no. 
-diffex.all.counts[duplicated(diffex.all.counts), ]
-
-# Move first column with gene names to row names 
-diffex.all.counts <- diffex.all.counts %>% 
-  column_to_rownames("gene")
+# diffex.all.counts <- 
+#   rbind.data.frame(
+#     diffex.status.counts,
+#     diffex.ColdVSWarm.counts,
+#     diffex.AmbVSWarm.counts,
+#     diffex.ColdVSAmb.counts,
+#     diffex.9vs26.counts,
+#     diffex.9vs12.counts,
+#     diffex.12vs26.counts) %>% 
+#   rownames_to_column("gene") %>%
+#     arrange(gene)
+#   
+# # are there any duplicate genes? no. 
+# diffex.all.counts[duplicated(diffex.all.counts), ]
+# 
+# # Move first column with gene names to row names 
+# diffex.all.counts <- diffex.all.counts %>% 
+#   column_to_rownames("gene")
 ```
 
-# Of all differentially expressed genes (all comparisons), which are the most influential of sample ordination in multivariate space? 
+## Of all differentially expressed genes (all comparisons), which are the most influential of sample ordination in multivariate space? 
 
 ## Run PCA on list of differentially expressed genes (across all comparisons) 
 
@@ -497,7 +504,7 @@ PCA is sensitive to the scale of measurement of the data. If all the data are no
 ### Perform PCA 
 
 ```{r}
-diff.pca<-FactoMineR::PCA(t(diffex.all.counts),graph=F) #note: need to transform count frame for this PCA 
+#diff.pca<-FactoMineR::PCA(t(diffex.all.counts),graph=F) #note: need to transform count frame for this PCA 
 ```
 
 ### Scree plot shows how much variance is explained by each Principal Component (PC) Axis: 
@@ -507,71 +514,71 @@ diff.pca<-FactoMineR::PCA(t(diffex.all.counts),graph=F) #note: need to transform
 - PC Axis 3 explains 9.3% of variance   
 
 ```{r}
-fviz_screeplot(diff.pca, addlabels = TRUE)
+#fviz_screeplot(diff.pca, addlabels = TRUE)
 ```
 
 ### Look at the relative contributions of each SAMPLE to PC axes 1, 2, and 3
 
 ```{r}
-fviz_contrib(diff.pca, choice = "ind", axes = 1) + ggtitle("Contribution of samples to PC dimension #1")
-fviz_contrib(diff.pca, choice = "ind", axes = 2) + ggtitle("Contribution of samples to PC dimension #2")
-fviz_contrib(diff.pca, choice = "ind", axes = 3) + ggtitle("Contribution of samples to PC dimension #3")
+# fviz_contrib(diff.pca, choice = "ind", axes = 1) + ggtitle("Contribution of samples to PC dimension #1")
+# fviz_contrib(diff.pca, choice = "ind", axes = 2) + ggtitle("Contribution of samples to PC dimension #2")
+# fviz_contrib(diff.pca, choice = "ind", axes = 3) + ggtitle("Contribution of samples to PC dimension #3")
 ```
 
 # Plot PC scores for axis 1 ~ axis 2, by treatment 
 
 ```{r}
-pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
-
-# PCA plots with samples, color coded by treatments 
-fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC2, color=infection status") 
-fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC2, color=temperature") 
-fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC2, color=day sampled")
-
-# PCA with samples + top 10 genes contributing to PC scores 
-fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
+# pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
+# 
+# # PCA plots with samples, color coded by treatments 
+# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC2, color=infection status") 
+# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC2, color=temperature") 
+# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC2, color=day sampled")
+# 
+# # PCA with samples + top 10 genes contributing to PC scores 
+# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
 ```
 
 # Plot PC scores for axis 1 ~ axis 3, by treatment 
 
 ```{r}
-pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
-
-# PCA plots with samples, color coded by treatments 
-fviz_pca_biplot(diff.pca, axes = c(1,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC3, color=infection status") 
-fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC3, color=temperature") 
-fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC3, color=day sampled")
-
-# PCA with samples + top 10 genes contributing to PC scores 
-fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
+# pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
+# 
+# # PCA plots with samples, color coded by treatments 
+# fviz_pca_biplot(diff.pca, axes = c(1,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC3, color=infection status") 
+# fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC3, color=temperature") 
+# fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC3, color=day sampled")
+# 
+# # PCA with samples + top 10 genes contributing to PC scores 
+# fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
 ```
 
 # Plot PC scores for axis 2 ~ axis 3, by treatment 
 
 ```{r}
-pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
-
-# PCA plots with samples, color coded by treatments 
-fviz_pca_biplot(diff.pca, axes = c(2,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC2 ~ PC3, color=infection status") 
-fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC2 ~ PC3, color=temperature") 
-fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC2 ~ PC3, color=day sampled")
-
-# PCA with samples + top 10 genes contributing to PC scores 
-fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
+# pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
+# 
+# # PCA plots with samples, color coded by treatments 
+# fviz_pca_biplot(diff.pca, axes = c(2,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC2 ~ PC3, color=infection status") 
+# fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC2 ~ PC3, color=temperature") 
+# fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC2 ~ PC3, color=day sampled")
+# 
+# # PCA with samples + top 10 genes contributing to PC scores 
+# fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
 ```
 
 ## Extract PC data for genes, showing their relative contributions to PC PC Axis 1 ~ Axis 2  
 
 ```{r}
-diff.pca.gene.data <- fviz_pca_var(diff.pca, axes = c(1,2), select.var = list(contrib = 100))$data 
-head(diff.pca.gene.data)
+# diff.pca.gene.data <- fviz_pca_var(diff.pca, axes = c(1,2), select.var = list(contrib = 100))$data 
+# head(diff.pca.gene.data)
 ```
 
 # Extract PC scores for each sample - are they distributed normally in multivarite space? 
 
 ```{r}
-pca.sample.scores <- diff.pca$ind
-hist(unlist(as.data.frame(pca.sample.scores)[1:3], use.names=FALSE), main="Histogram of PC scores for dimensions 1, 2 & 3") #should have normal distribution for multivariate normality 
+# pca.sample.scores <- diff.pca$ind
+# hist(unlist(as.data.frame(pca.sample.scores)[1:3], use.names=FALSE), main="Histogram of PC scores for dimensions 1, 2 & 3") #should have normal distribution for multivariate normality 
 ```
 
 ## Prepare data for downtream statistics (if desired) 
@@ -581,14 +588,14 @@ The following creates a master dataframe from the differentially expressed genes
 # Note: instead of `data.frame(t(diffex.all.counts)) %>%` you could easily swap in `data.frame(t(counts(dds.larvae))) %>%` go generate the same dataframe, but with all genes (not just differentially expressed ones)
 
 ```{r}
-counts4stats <- key %>% 
-  mutate(sample_stage=as.character(sample_stage)) %>%
-  right_join(
-    data.frame(t(diffex.all.counts)) %>% 
-  rownames_to_column("sample_stage")
-  ) %>% 
-  pivot_longer(cols=starts_with("TRINITY"), values_to = "count", names_to = "gene")
-head(counts4stats)
+# counts4stats <- key %>% 
+#   mutate(sample_stage=as.character(sample_stage)) %>%
+#   right_join(
+#     data.frame(t(diffex.all.counts)) %>% 
+#   rownames_to_column("sample_stage")
+#   ) %>% 
+#   pivot_longer(cols=starts_with("TRINITY"), values_to = "count", names_to = "gene")
+# head(counts4stats)
 ```
 
 ## Even more visualization 
@@ -598,15 +605,15 @@ head(counts4stats)
 In DESeq2, the function plotMA shows the log2 fold changes attributable to a given variable over the mean of normalized counts for all the samples in the DESeqDataSet. Points will be colored **red if the padj<0.05**. Points which fall out of the window are plotted as open triangles pointing either up or down.
 
 ```{r}
-plotMA(res.all.status, main="DEG by infection status\nLog2 fold change ~ mean of normalized counts")
-
-plotMA(res.all.ColdVSWarm, main="DEGs between Cold & Warm\nLog2 fold change ~ mean of normalized counts")
-plotMA(res.all.AmbVSWarm, main="DEGs between Ambient & Warm\nLog2 fold change ~ mean of normalized counts")
-plotMA(res.all.ColdVSAmb, main="DEGs between Ambient & Cold\nLog2 fold change ~ mean of normalized counts")
-
-plotMA(res.all.9vs26, main="DEGs between Day 9 & Day 26\nLog2 fold change ~ mean of normalized counts")
-plotMA(res.all.9vs12, main="DEGs between Day 9 & Day 12\nLog2 fold change ~ mean of normalized counts")
-plotMA(res.all.12vs26, main="DEGs between Day 12 & Day 26\nLog2 fold change ~ mean of normalized counts")
+# plotMA(res.all.status, main="DEG by infection status\nLog2 fold change ~ mean of normalized counts")
+# 
+# plotMA(res.all.ColdVSWarm, main="DEGs between Cold & Warm\nLog2 fold change ~ mean of normalized counts")
+# plotMA(res.all.AmbVSWarm, main="DEGs between Ambient & Warm\nLog2 fold change ~ mean of normalized counts")
+# plotMA(res.all.ColdVSAmb, main="DEGs between Ambient & Cold\nLog2 fold change ~ mean of normalized counts")
+# 
+# plotMA(res.all.9vs26, main="DEGs between Day 9 & Day 26\nLog2 fold change ~ mean of normalized counts")
+# plotMA(res.all.9vs12, main="DEGs between Day 9 & Day 12\nLog2 fold change ~ mean of normalized counts")
+# plotMA(res.all.12vs26, main="DEGs between Day 12 & Day 26\nLog2 fold change ~ mean of normalized counts")
 ```
 
 ### You can also make MA-plots with transformations 
@@ -618,12 +625,12 @@ We provide the dds object and the name or number of the coefficient we want to s
 ### Here we apply `lfcShrink()` function to the dds.larvae.DESeq object, and specify `coef=2` to specify that we want to examine DEGs between infection status by each shrinkage method. 
 
 ```{r}
-resultsNames(dds.larvae.DESeq) # Check the order of coefficients to use in the lfcShrink function.
-# use `coef=2` to refers to infection status 
-
-# Generate MA-plots after the different effect size shrinkage methods 
-par(mfrow=c(1,3), mar=c(4,4,2,1))
-plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="apeglm"),  main="apeglm")
-plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="normal"), main="normal")
-plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="ashr"), main="ashr")
+# resultsNames(dds.larvae.DESeq) # Check the order of coefficients to use in the lfcShrink function.
+# # use `coef=2` to refers to infection status 
+# 
+# # Generate MA-plots after the different effect size shrinkage methods 
+# par(mfrow=c(1,3), mar=c(4,4,2,1))
+# plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="apeglm"),  main="apeglm")
+# plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="normal"), main="normal")
+# plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="ashr"), main="ashr")
 ```

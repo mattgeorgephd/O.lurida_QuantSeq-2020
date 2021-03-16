@@ -7,6 +7,7 @@ output: html_document
 
 ```{r}
 getwd()
+write_delim()
 ```
 
 ### Load libraries and source scripts 
@@ -43,7 +44,7 @@ ggplot(data = data.frame(colSums(counts.filtered)) %>%
 load(file = "../results/gene-counts-trans") #object = counts.t
 ```
 
-#### If warranted, check out sample ke  
+#### If warranted, check out sample key  
 ```{r}
 key %>% filter(stage=="juvenile") %>% select(sample, population, temp.parent, pCO2.parent)
 ```
@@ -121,11 +122,11 @@ pheatmap(data.matrix(counts.tsk.juv %>% dplyr::select(starts_with("OLUR"))), Row
                      show_colnames =FALSE, cluster_cols = FALSE, cluster_rows = TRUE, 
                      scale="column", color=c("dodgerblue3", "goldenrod1"), 
                      main = "Oly juvenile ctendia gene counts", annotation_row=counts.tsk.juv[,c("population", "pCO2.parent")],
-         filename = "../results/heatmap-juvenile-counts.pdf")
+         filename = "../results/heatmap-juvenile-counts.png")
 ```
 
 Resulting heat map is located in results/ directory: 
-![heatmap-juvenile-counts.pdf](https://github.com/laurahspencer/O.lurida_QuantSeq-2020/blob/master/results/heatmap-juvenile-counts.pdf)
+![heatmap-juvenile-counts.png](https://github.com/laurahspencer/O.lurida_QuantSeq-2020/blob/master/results/heatmap-juvenile-counts.png?raw=true)
 
 # Analysis in DESeq2  
 
@@ -265,7 +266,7 @@ dds.juv.DESeq <- DESeq(dds.juv.DESeq)
 Create results objects, but summary of results are also shown
 
 NOTE: can only compare two treatments at a time
-
+https://www.evernote.com/shard/s668/nl/155638310/b27aba76-366d-4047-b186-6951bbf472ac/
 ```{r}
 # Here are all the possible contrasts I can make 
 #levels(dds.multi.DESeq$group)
