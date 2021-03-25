@@ -10,7 +10,7 @@ output: html_document
 ```{r, message=FALSE, warning=FALSE, results=FALSE}
 source("../references/biostats.R")
 
-list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "corrplot", "PerformanceAnalytics", "janitor", "cowplot") #add new libraries here 
+list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "corrplot", "PerformanceAnalytics", "janitor", "cowplot", "radiator") #add new libraries here 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -18,7 +18,6 @@ if(length(new.packages)) install.packages(new.packages)
 lapply(list.of.packages, FUN = function(X) {
   do.call("require", list(X)) 
 })
-install.packages("radiator")
 ```
 
 In this notebook I will import gene counts for juvenile samples that have been deduplicated. 
@@ -33,29 +32,44 @@ getwd()
 ### Import QuantSeq sample info, library/file names, and then join 
 
 ```{r}
-sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
-          mutate_at(vars(lane, temp.parent), as.factor) %>% 
-          mutate_at(vars(RNA.conc, endpoint.RFU, bioan.mean.bp), as.numeric) %>%
-          mutate(sample_stage=paste(sample, stage, sep="_"))
+# sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
+#           mutate_at(vars(lane, temp.parent), as.factor) %>% 
+#           mutate_at(vars(RNA.conc, endpoint.RFU, bioan.mean.bp), as.numeric) %>%
+#           mutate(sample=paste(sample, stage, sep="_"))
+# 
+# filenames <- data.frame(read.table("../qc-processing/gatk/featureCounts-filenames.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
+#           dplyr::rename(filename = 1) %>%
+#           mutate(sample = as.character(gsub("_.*","", filename))) %>% 
+#           left_join(sample.info[c("sample", "sample")])
+# 
+# # Fill in NA value on the "Undetermined" row  
+# filenames[filenames$filename == "Undetermined","sample"] <- "Undetermined"
+# 
+# (key <- full_join(sample.info, filenames) %>% filter(stage=="juvenile"))
+# 
+# key %>% dplyr::filter(stage=="juvenile") %>% dplyr::select(sample, population)
 
-filenames <- data.frame(read.table("../qc-processing/gatk/featureCounts-filenames.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
-          dplyr::rename(filename = 1) %>%
-          mutate(sample = as.character(gsub("_.*","", filename))) %>% 
-          left_join(sample.info[c("sample", "sample_stage")])
-
-# Fill in NA value on the "Undetermined" row  
-filenames[filenames$filename == "Undetermined","sample_stage"] <- "Undetermined"
-
-(key <- full_join(sample.info, filenames) %>% filter(stage=="juvenile"))
-
-key %>% dplyr::filter(stage=="juvenile") %>% dplyr::select(sample, population)
+# counts.juv <- data.frame(read.table("../qc-processing/gatk/featurecounts-gene2kbdown.Rmatrix.txt", header = T, stringsAsFactors = F, fill = FALSE)) %>%
+#           column_to_rownames(var="Geneid") %>%
+#           rename_all(~as.character(filenames$sample))
 ```
 
-### Import counts matrix file as dataframe. 
+### Import data 
+
 ```{r}
-counts.juv <- data.frame(read.table("../qc-processing/gatk/featurecounts-gene2kbdown.Rmatrix.txt", header = T, stringsAsFactors = F, fill = FALSE)) %>%
-          column_to_rownames(var="Geneid") %>%
-          rename_all(~as.character(filenames$sample_stage))
+load(file = "../results/gene-counts-filtered") #object = counts.filtered
+load(file="../raw-data/key.filtered")
+
+juvenile.samples <- key.filtered %>% filter(stage=="juvenile") %>% select(sample) %>% unlist() %>% as.vector() %>% as.character()
+
+ggplotly(
+ggplot(data = counts.filtered %>%
+         select(juvenile.samples) %>%
+         colSums() %>% data.frame() %>%
+                  dplyr::rename(count.total = 1) %>% 
+                  rownames_to_column(var="sample"))  +
+           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample, juvenile (whole-body)") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()))
 ```
 
 ### Import Colony results indicating sibship 
@@ -66,7 +80,7 @@ counts.juv <- data.frame(read.table("../qc-processing/gatk/featurecounts-gene2kb
     father_id=as.factor(str_remove(father_id, "\\*")),
     mother_id=as.factor(str_remove(mother_id, "#")),
     cluster_index=as.factor(cluster_index)) %>%
-    left_join(key[c("sample", "population", "pCO2.parent")], by = c("offspring_id"="sample")) %>%
+    left_join(key.filtered[c("sample", "population", "pCO2.parent")], by = c("offspring_id"="sample")) %>%
     mutate(population=as.factor(population), pCO2.parent=as.factor(pCO2.parent)))
 ```
 
@@ -77,64 +91,69 @@ counts.juv <- data.frame(read.table("../qc-processing/gatk/featurecounts-gene2kb
 - Fidalgo Bay - High: Two are half sibs (same mother, 183 and 184), the other two are not related (181, 185). So, I can use 3 of the 4 samples here (181, 185, and either 183 or 184). 
 
 
+```{r}
+counts.t.juv <- as.data.frame(counts.t[juvenile.samples, ])
+counts.t.juv[,1:3] #take a peak at the resulting dataframe 
+```
 ## Select only the non-sibling juveniles from Fidalgo Bay (not using Dabob Bay)
 
+Samples with lower-ish total genes counts: 139, 141, 168, 181, 185
+
 ```{r}
-counts.juv1 <- counts.juv %>% select(c("156_juvenile", "159_juvenile", "161_juvenile", "181_juvenile", "185_juvenile", "183_juvenile")) #8 DEGs
-counts.juv2 <- counts.juv %>% select(c("156_juvenile", "159_juvenile", "162_juvenile", "181_juvenile", "185_juvenile", "183_juvenile")) #8 DEGs
-counts.juv3 <- counts.juv %>% select(c("156_juvenile", "159_juvenile", "161_juvenile", "181_juvenile", "185_juvenile", "184_juvenile")) #15 DEGs
-counts.juv4 <- counts.juv %>% select(c("156_juvenile", "159_juvenile", "162_juvenile", "181_juvenile", "185_juvenile", "184_juvenile")) #30 DEGs
+counts.t.juv1 <- counts.t.juv %>% filter(rownames(counts.t.juv) %in% c("156", "159", "161", "181", "185", "183")) #8 DEGs
+counts.t.juv2 <- counts.t.juv %>% filter(rownames(counts.t.juv) %in% c("156", "159", "162", "181", "185", "183")) #8 DEGs
+counts.t.juv3 <- counts.t.juv %>% filter(rownames(counts.t.juv) %in% c("156", "159", "161", "181", "185", "184")) #15 DEGs
+counts.t.juv4 <- counts.t.juv %>% filter(rownames(counts.t.juv) %in% c("156", "159", "162", "181", "185", "184")) #30 DEGs
 ```
 
 ### Summarize counts and visualize (remove last column - that's undetermined counts)
-```{r}
-# select one of the nonsib scenarios to run through the analysis pipelne
-counts.juv0 <- counts.juv3
 
-print(paste("Number of samples:", ncol(counts.juv0), sep=" "))
-print(paste("Total number of genes in dataframe:", prettyNum(nrow(counts.juv0), big.mark = ","), sep=" "))
-print(paste("Total counts, all samples:", prettyNum(sum(colSums(counts.juv0)), big.mark = ","), sep=" "))
-#print(paste("Counts for", colnames(counts.juv0), ":",  prettyNum(colSums(counts.juv0), big.mark = ","), sep=" "))
+###### HERE - SELECT ONE OF THE NON-SIB SAMPLE SCENARIOS THEN RE-RUN ANALYSIS
+
+```{r}
+counts.t.juv0 <- counts.t.juv2
+```
+
+```{r}
+print(paste("Number of samples:", nrow(counts.t.juv0), sep=" "))
+print(paste("Total number of genes in dataframe:", prettyNum(ncol(counts.t.juv0), big.mark = ","), sep=" "))
+print(paste("Total counts, all samples:", prettyNum(sum(rowSums(counts.t.juv0)), big.mark = ","), sep=" "))
+#print(paste("Counts for", colnames(counts.t.juv0), ":",  prettyNum(colSums(counts.t.juv0), big.mark = ","), sep=" "))
 
 #inspect total counts by sample
-#ggplotly(
-  ggplot(data.frame(colSums(counts.juv0)) %>% dplyr::rename(count.total = 1) %>% rownames_to_column(var="sample"))  + geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample") + 
-             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) #) 
+ggplotly(
+  ggplot(data.frame(rowSums(counts.t.juv0)) %>% dplyr::rename(count.total = 1) %>% rownames_to_column(var="sample"))  + geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())) 
 ```
 
-### Transpose dataframe so each row = a sample (aka "objects"), and each column = genes (aka "variables") 
-```{r}
-counts.t.juv <- t(counts.juv0) #transform data to have each sample a row, each column a gene 
-```
 
 ## Optional 
 
 ### Pre-filtering - remove rows (genes) with less than a total of 10 reads (across all samples) (why?)
 
 ```{r}
-keep <- colSums(counts.t.juv) >= 10
-counts.ts.juv <- counts.t.juv[,keep]
+keep <- colSums(counts.t.juv0) >= 10
+counts.ts.juv <- counts.t.juv0[,keep]
 print(paste("# genes remaining after pre-filtering:", ncol(counts.ts.juv)))
-print(paste("# of genes dropped:", ncol(counts.t.juv) - ncol(counts.ts.juv), sep=" "))
+print(paste("# of genes dropped:", ncol(counts.t.juv0) - ncol(counts.ts.juv), sep=" "))
 ```
 
-### How many genes were identified in each sample?
+### How many genes were identified in each sample AFTER filtering?
 
 ```{r}
-#ggplotly(
-ggplot(data = data.frame(rowSums(counts.t.juv != 0)) %>% 
+ggplotly(
+ggplot(data = data.frame(rowSums(counts.t.juv0 != 0)) %>% 
                   dplyr::rename(count.total = 1) %>% 
-                  rownames_to_column(var="sample") %>% 
-                  filter(grepl("_juvenile", sample))) +
+                  rownames_to_column(var="sample")) +
            geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total # genes by sample, juvenile whole body") + 
-             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())) 
 ```
 
 ### Merge sample key info to count data, then sort, and generate heat map for initial inspection by treatment 
 ```{r}
 # merge count data with sample key, reset row names as sample names, and arrange by infection, then temperature, then day 
-counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
-  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
+counts.tsk.juv <- merge(x=key.filtered, by.x="sample", y=counts.ts.juv, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample") 
 
 head(counts.tsk.juv[1:24]) #check out results of merge/arrange
 #counts.tsk.juv %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
@@ -194,7 +213,8 @@ NOTE: Hover over points to see the sample numbers
 # PCA with points color coded by parental pCO2 exposure 
 #ggplotly(
 plotPCA(vsd.juv, intgroup="pCO2.parent") + 
-           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.juv)))#, tooltip = "text")
+           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + 
+  geom_point(size=3, aes(text=colnames(vsd.juv))) + theme_minimal()#, tooltip = "text")
 ```
 
 ### Generate heat maps before & after transformation  
@@ -257,7 +277,7 @@ print(diffex.juv <- subset(res.juv.pco2, padj < 0.05)) #extract stats for genes 
 
 diffex.juv.counts <- subset(counts(dds.juv.DESeq), rownames(dds.juv.DESeq) %in% rownames(diffex.juv)) 
 
-#diffex.juv.counts <- diffex.juv.counts[,subset(key, stage=="juvenile")$sample_stage]
+#diffex.juv.counts <- diffex.juv.counts[,subset(key.filtered, stage=="juvenile")$sample]
 ```
 
 ## Heatmap of differentially expressed genes, both populations 
@@ -285,7 +305,7 @@ a <-  plotCounts(dds.juv.DESeq, gene=juv.p05.names[i], intgroup=c("pCO2.parent")
 b <- ggplot(a %>% rownames_to_column("sample") %>% 
               mutate(sample=gsub("_juvenile", "", sample)),
        aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
-  geom_point(size=3, position=position_jitter(w = 0.2,h = 0)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
     #geom_text(size=2, col="black") +
     theme_bw() +
     ggtitle(juv.p05.names[i]) +
@@ -307,74 +327,72 @@ write_delim(
   select(contig, start, end, Name, Note, SPID),
   "../results/diffex.juvFB.bed", delim = '\t', col_names = F)
 
-key %>% select(sample, population, pCO2.parent)
+key.filtered %>% select(sample, population, pCO2.parent)
 Olurida_gene_uniprot %>% filter(Name %in% juv.p05.names) %>%
   select(contig, start, end, Name, Note, SPID)
 ```
 
-## I want to identify DEGs that are common among the four sample scenarios (i.e. different combinations of the non-sibs)
+#### STOP HERE, AND RE-RUN THE ABOVE CODE AFTER CHANGING THE SAMPLE SCENARIO 
+
+# Now I want to identify DEGs that are common among the _four_ sample scenarios (i.e. different combinations of the non-sibs)
 
 Scenario 1
 ```{r}
-counts.t.juv <- t(counts.juv1) #transform data to have each sample a row, each column a gene 
-keep <- colSums(counts.t.juv) >= 10
-counts.ts.juv <- counts.t.juv[,keep]
-counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
-  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
-dds.juv <- DESeqDataSetFromMatrix(countData = counts.tsk.juv[,grepl("OLUR", colnames(counts.tsk.juv))] %>% t(),
-                              colData = counts.tsk.juv["pCO2.parent"],
+keep1 <- colSums(counts.t.juv1) >= 10
+counts.ts.juv1 <- counts.t.juv1[,keep1]
+counts.tsk.juv1 <- merge(x=key.filtered, by.x="sample", y=counts.ts.juv1, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample") 
+dds.juv1 <- DESeqDataSetFromMatrix(countData = counts.tsk.juv1[,grepl("OLUR", colnames(counts.tsk.juv1))] %>% t(),
+                              colData = counts.tsk.juv1["pCO2.parent"],
                               design = ~pCO2.parent)
-dds.juv.DESeq <- DESeq(dds.juv) 
-summary(res.juv.pco2 <- results(dds.juv.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
-print(diffex.juv1 <- subset(res.juv.pco2, padj < 0.05))
+dds.juv1.DESeq <- DESeq(dds.juv1) 
+summary(res.juv1.pco2 <- results(dds.juv1.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
+print(diffex.juv1 <- subset(res.juv1.pco2, padj < 0.05))
 ```
 
 Scenario 2
 ```{r}
-counts.t.juv <- t(counts.juv2) #transform data to have each sample a row, each column a gene 
-keep <- colSums(counts.t.juv) >= 10
-counts.ts.juv <- counts.t.juv[,keep]
-counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
-  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
-dds.juv <- DESeqDataSetFromMatrix(countData = counts.tsk.juv[,grepl("OLUR", colnames(counts.tsk.juv))] %>% t(),
+keep2 <- colSums(counts.t.juv2) >= 10
+counts.ts.juv2 <- counts.t.juv2[,keep2]
+counts.tsk.juv2 <- merge(x=key.filtered, by.x="sample", y=counts.ts.juv2, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample") 
+dds.juv2 <- DESeqDataSetFromMatrix(countData = counts.tsk.juv2[,grepl("OLUR", colnames(counts.tsk.juv2))] %>% t(),
                               colData = counts.tsk.juv["pCO2.parent"],
                               design = ~pCO2.parent)
-dds.juv.DESeq <- DESeq(dds.juv) 
-summary(res.juv.pco2 <- results(dds.juv.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
-print(diffex.juv2 <- subset(res.juv.pco2, padj < 0.05))
+dds.juv2.DESeq <- DESeq(dds.juv2) 
+summary(res.juv2.pco2 <- results(dds.juv2.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
+print(diffex.juv2 <- subset(res.juv2.pco2, padj < 0.05))
 ```
 
 Scenario 3
 ```{r}
-counts.t.juv <- t(counts.juv3) #transform data to have each sample a row, each column a gene 
-keep <- colSums(counts.t.juv) >= 10
-counts.ts.juv <- counts.t.juv[,keep]
-counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
-  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
-dds.juv <- DESeqDataSetFromMatrix(countData = counts.tsk.juv[,grepl("OLUR", colnames(counts.tsk.juv))] %>% t(),
-                              colData = counts.tsk.juv["pCO2.parent"],
+keep3 <- colSums(counts.t.juv3) >= 10
+counts.ts.juv3 <- counts.t.juv3[,keep3]
+counts.tsk.juv3 <- merge(x=key.filtered, by.x="sample", y=counts.ts.juv3, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample") 
+dds.juv3 <- DESeqDataSetFromMatrix(countData = counts.tsk.juv3[,grepl("OLUR", colnames(counts.tsk.juv3))] %>% t(),
+                              colData = counts.tsk.juv3["pCO2.parent"],
                               design = ~pCO2.parent)
-dds.juv.DESeq <- DESeq(dds.juv) 
-summary(res.juv.pco2 <- results(dds.juv.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
-print(diffex.juv3 <- subset(res.juv.pco2, padj < 0.05))
+dds.juv3.DESeq <- DESeq(dds.juv3) 
+summary(res.juv3.pco2 <- results(dds.juv3.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
+print(diffex.juv3 <- subset(res.juv3.pco2, padj < 0.05))
 ```
 
 Scenario 4
 ```{r}
-counts.t.juv <- t(counts.juv4) #transform data to have each sample a row, each column a gene 
-keep <- colSums(counts.t.juv) >= 10
-counts.ts.juv <- counts.t.juv[,keep]
-counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
-  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
-dds.juv <- DESeqDataSetFromMatrix(countData = counts.tsk.juv[,grepl("OLUR", colnames(counts.tsk.juv))] %>% t(),
-                              colData = counts.tsk.juv["pCO2.parent"],
+keep4 <- colSums(counts.t.juv4) >= 10
+counts.ts.juv4 <- counts.t.juv4[,keep4]
+counts.tsk.juv4 <- merge(x=key.filtered, by.x="sample", y=counts.ts.juv4, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample") 
+dds.juv4 <- DESeqDataSetFromMatrix(countData = counts.tsk.juv4[,grepl("OLUR", colnames(counts.tsk.juv4))] %>% t(),
+                              colData = counts.tsk.juv4["pCO2.parent"],
                               design = ~pCO2.parent)
-dds.juv.DESeq <- DESeq(dds.juv) 
-summary(res.juv.pco2 <- results(dds.juv.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
-print(diffex.juv4 <- subset(res.juv.pco2, padj < 0.05))
+dds.juv4.DESeq <- DESeq(dds.juv4) 
+summary(res.juv4.pco2 <- results(dds.juv4.DESeq, contrast=c("pCO2.parent", "Ambient", "High"), alpha=0.05))
+print(diffex.juv4 <- subset(res.juv4.pco2, padj < 0.05))
 ```
 ```{r}
-juv.p05.names.all <- Reduce(intersect, list(rownames(diffex.juv1),rownames(diffex.juv2),rownames(diffex.juv3),rownames(diffex.juv4)))
+(juv.p05.names.all <- Reduce(intersect, list(rownames(diffex.juv1),rownames(diffex.juv2),rownames(diffex.juv3),rownames(diffex.juv4))))
 ```
 
 Plot the genes that are differentially expressed in all 4 nonsib scenarios 
@@ -386,11 +404,11 @@ a <-  plotCounts(dds.juv.DESeq, gene=juv.p05.names.all[i], intgroup=c("pCO2.pare
 b <- ggplot(a %>% rownames_to_column("sample") %>% 
               mutate(sample=gsub("_juvenile", "", sample)),
        aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
-  geom_point(size=3, position=position_jitter(w = 0.2,h = 0)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
     #geom_text(size=2, col="black") +
     theme_bw() +
     ggtitle(juv.p05.names.all[i]) +
-    theme(plot.title = element_text(hjust = 0.5, size = 6), axis.text.x = element_blank(),
+    theme(plot.title = element_text(hjust = 0.5, size = 10), axis.text.x = element_blank(),
           axis.text.y = element_text(size=6),
           axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "none")
 count_plots.juv[[i]] <- b

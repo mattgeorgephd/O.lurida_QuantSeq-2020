@@ -18,7 +18,7 @@ getwd()
 ```{r, message=FALSE, warning=FALSE, results=FALSE}
 source("../references/biostats.R")
 
-list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "corrplot", "PerformanceAnalytics") #add new libraries here 
+list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "corrplot", "PerformanceAnalytics", "cowplot") #add new libraries here 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -38,11 +38,12 @@ lapply(list.of.packages, FUN = function(X) {
 
 ```{r}
 sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
-          mutate_at(vars(lane, temp.parent), as.factor) %>% 
+          mutate_at(vars(lane, temp.parent,week.collected), as.factor) %>% 
           mutate_at(vars(RNA.conc, bioan.mean.bp), funs(as.numeric)) %>%
-          mutate(sample=gsub("b", "", sample)) %>% #get rid of the few "b"'s in sample #'s (they were re-extracted)
+          mutate_at(vars(larval.date.collected), funs(as.Date)) %>%
+  mutate(sample=gsub("b", "", sample)) %>% #get rid of the few "b"'s in sample #'s (they were re-extracted)
           mutate(sample_stage=paste(sample, stage, sep="_"))
-
+  
 filenames <- data.frame(read.table("../qc-processing/featureCounts/filenames-deduplicated.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
           dplyr::rename(filename = 1) %>%
           mutate(sample = as.character(gsub("_.*","", filename))) %>% 
@@ -156,11 +157,10 @@ Samples 35, 412, and 44 have very low counts, similar to sample 571 which was th
 remove.list <- c("Undetermined", multiqc.stats %>% filter(pcr.cycles>17) %>% select(Sample) %>% unlist() %>% as.vector()) 
 counts.filtered <- counts[ , -which(names(counts) %in% remove.list)] %>% mutate_at(vars(starts_with("feature")), as.character)
 ncol(counts.filtered)
-key <- key[ -which(key$sample %in% remove.list), ]
-
-nrow(key)
-nrow(key) == ncol(counts.filtered) #should = TRUE.
-save(key, file="../raw-data/key") #save key object. IMPORTANT: this needs to be done here AFTER filtering out whole samples 
+key.filtered <- key[ -which(key$sample %in% remove.list), ]
+nrow(key.filtered)
+nrow(key.filtered) == ncol(counts.filtered) #should = TRUE.
+save(key.filtered, file="../raw-data/key.filtered") #save key object. IMPORTANT: this needs to be done here AFTER filtering out whole samples 
 ```
 
 ```{r}

@@ -163,7 +163,9 @@ NOTE: Hover over points to see the sample numbers
 # PCA with points color coded by population 
 ggplotly(
   plotPCA(vsd.adult, intgroup="population") + 
-           ggtitle("PCA by population (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
+           ggtitle("PCA by population (var-stabilizing transformed)") + 
+    geom_point(size=3, aes(text=colnames(vsd.adult))) + 
+    theme_minimal(), tooltip = "text")
 
 # PCA with points color coded by parental pCO2 exposure 
 ggplotly(
@@ -178,7 +180,8 @@ ggplotly(
 # PCA with same 2 colors for all populations (for prelim. results presentation)
 ggplotly(
   plotPCA(vsd.adult, intgroup=c("population","pCO2.parent")) + 
-           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=4, aes(text=colnames(vsd.adult))) + scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4")), tooltip = "text")
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=4, aes(text=colnames(vsd.adult))) + 
+    scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4")), tooltip = "text")
 ```
 
 
@@ -349,7 +352,6 @@ pheatmap(diffex.adult.DB.counts[rownames(diffex.adult.DB[order(diffex.adult.DB$p
          main = "(Adults) DB DEGs by direct pCO2 exposure, ordered by p-value", annotation_col=dds.adult.df.DB[2], 
          color=c("dodgerblue3", "goldenrod1"))
 ```
-
 # Plot single differentially expressed genes within OB1
 
 ```{r}
@@ -429,42 +431,180 @@ Enrichment Analysis!
 ```{r}
 # DEG in FB 
 diffex.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID, Note), by = c("gene"="Name")) %>% 
   select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 
 # All genes in FB (background)
 res.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
   left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
   select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# DEG in DB 
+diffex.adult.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# All genes in DB (background)
+res.adult.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
+  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 ```
 
+## Fidalgo Bay - Enriched functions in DEGs between pCO2 exposure 
 
+| Term | Count | % | PValue | Genes | List Total | Pop Hits | Pop Total | Fold Enrichment | FDR |
+|-|-|-|-|-|-|-|-|-|-|
+| GO:0030097~hemopoiesis | 3 | 7.5 | 0.0126 | Q04721, Q02858, P08953 | 38 | 39 | 8403 | 17.01 | 1.0 |
+| GO:1990403~embryonic brain development | 2 | 5.0 | 0.0175 | E9PY46, P62997 | 38 | 4 | 8403 | 110.57 | 1.0 |
+| GO:0007507~heart development | 4 | 10.0 | 0.0208 | P97864, E9PY46, Q02858, P08953 | 38 | 134 | 8403 | 6.60 | 1.0 |
+| GO:0044255~cellular lipid metabolic process | 2 | 5.0 | 0.0516 | Q9BYK8, Q08BB2 | 38 | 12 | 8403 | 36.86 | 1.0 |
+| GO:0009617~response to bacterium | 2 | 5.0 | 0.0723 | P08953, Q6AYS4 | 38 | 17 | 8403 | 26.015 | 1.0 |
+| GO:0045944~positive regulation of transcription from RNA polymerase II promoter | 5 | 12.5 | 0.0868 | Q7ZVK3, Q62725, Q9BYK8, E9QAM5, P08953 | 38 | 384 | 8403 | 2.88 | 1.0 |
 
+## Dabob Bay - Enriched functions in DEGs between pCO2 exposure 
 
+| Term | Count | % | PValue | Genes | List Total | Pop Hits | Pop Total | Fold Enrichment | FDR |
+|-|-|-|-|-|-|-|-|-|-|
+| GO:0055114~oxidation-reduction process | 12 | 17.65 | 1.04E-4 | Q9Z339, P49894, P11714, P51174, Q64583, P10632, O42412, P34277, Q7Z449, Q0IIF9, Q6VVW9, Q9R0H0 | 57 | 431 | 8403 | 4.1 | 0.023 |
+| GO:0002591~positive regulation of antigen processing and presentation of peptide antigen via MHC class I | 3 | 4.41 | 2.60E-4 | P08183, P21440, P06795 | 57 | 4 | 8403 | 110.6 | 0.023 |
+| GO:0002489~antigen processing and presentation of endogenous peptide antigen via MHC class Ib via ER pathway, TAP-dependent | 3 | 4.41 | 2.60E-4 | P08183, P21440, P06795 | 57 | 4 | 8403 | 110.6 | 0.023 |
+| GO:0002485~antigen processing and presentation of endogenous peptide antigen via MHC class I via ER pathway, TAP-dependent | 3 | 4.41 | 2.60E-4 | P08183, P21440, P06795 | 57 | 4 | 8403 | 110.6 | 0.023 |
+| GO:0002481~antigen processing and presentation of exogenous protein antigen via MHC class Ib, TAP-dependent | 3 | 4.41 | 2.60E-4 | P08183, P21440, P06795 | 57 | 4 | 8403 | 110.6 | 0.023 |
+| GO:0006631~fatty acid metabolic process | 4 | 5.88 | 0.0049 | P48035, O35488, P51174, Q9R0H0 | 57 | 52 | 8403 | 11.3 | 0.36 |
+| GO:0008152~metabolic process | 6 | 8.82 | 0.0071 | Q9Z339, O35488, P51174, P34277, P47713, Q9R0H0 | 57 | 182 | 8403 | 4.9 | 0.45 |
+| GO:0055088~lipid homeostasis | 3 | 4.41 | 0.0084 | P51174, P21440, Q9R0H0 | 57 | 21 | 8403 | 21.1 | 0.47 |
+| GO:0006805~xenobiotic metabolic process | 3 | 4.41 | 0.010 | Q95JD5, P10632, O43704 | 57 | 23 | 8403 | 19.2 | 0.50 |
+| GO:0006810~transport | 9 | 13.23 | 0.011 | Q9Z2J0, P48035, P08183, Q8R4G9, Q7TM99, P21440, P06795, Q99758, P43006 | 57 | 466 | 8403 | 2.9 | 0.51 |
+| GO:0042493~response to drug | 5 | 7.35 | 0.013 | P08183, Q8R4G9, P06795, Q99758, P43006 | 57 | 137 | 8403 | 5.4 | 0.52 |
+| GO:0055085~transmembrane transport | 6 | 8.82 | 0.015 | Q9Z2J0, P08183, Q7TM99, P21440, P06795, Q99758 | 57 | 221 | 8403 | 4.0 | 0.57 |
+| GO:0097267~omega-hydroxylase P450 pathway | 2 | 2.94 | 0.020 | P10632, Q7Z449 | 57 | 3 | 8403 | 98.3 | 0.68 |
+| GO:0030855~epithelial cell differentiation | 3 | 4.41 | 0.027 | Q9UGM3, Q95JD5, O43704 | 57 | 39 | 8403 | 11.3 | 0.87 |
+| GO:0008202~steroid metabolic process | 3 | 4.41 | 0.037 | Q95JD5, P10632, O43704 | 57 | 46 | 8403 | 9.6 | 1 |
+| GO:0006940~regulation of smooth muscle contraction | 2 | 2.94 | 0.039 | P49817, Q8R4G9 | 57 | 6 | 8403 | 49.1 | 1 |
+| GO:0009812~flavonoid metabolic process | 2 | 2.94 | 0.052 | Q95JD5, O43704 | 57 | 8 | 8403 | 36.9 | 1 |
+| GO:0006629~lipid metabolic process | 4 | 5.88 | 0.054 | O35488, P51174, P47713, Q9R0H0 | 57 | 129 | 8403 | 4.6 | 1 |
+| GO:0042446~hormone biosynthetic process | 2 | 2.94 | 0.065 | P49894, O42412 | 57 | 10 | 8403 | 29.5 | 1 |
+| GO:0045332~phospholipid translocation | 2 | 2.94 | 0.065 | P08183, P21440 | 57 | 10 | 8403 | 29.5 | 1 |
+| GO:0042403~thyroid hormone metabolic process | 2 | 2.94 | 0.071 | Q95JD5, O43704 | 57 | 11 | 8403 | 26.8 | 1 |
+| GO:0006855~drug transmembrane transport | 2 | 2.94 | 0.083 | P08183, P21440 | 57 | 13 | 8403 | 22.7 | 1 |
+| GO:0010942~positive regulation of cell death | 2 | 2.94 | 0.089 | O95069, Q8CJ26 | 57 | 14 | 8403 | 21.1 | 1 |
+| GO:0000038~very long-chain fatty acid metabolic process | 2 | 2.94 | 0.096 | O35488, Q9R0H0 | 57 | 15 | 8403 | 19.7 | 1 |
+| GO:0051923~sulfation | 2 | 2.94 | 0.096 | Q95JD5, O43704 | 57 | 15 | 8403 | 19.7 | 1 |
 
-
-To copy the SPIDs 
+Read in GO terms for Revigo
 
 ```{r}
-# FB 
-adult.all.DEGs %>% filter(population=="FB") %>%
-  select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+read_delim(file="../results/Adult_FB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
+  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
+
+read_delim(file="../results/Adult_DB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
+  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
 ```
 
-Read in FB GO terms for Revigo 
+
+Script to extract GO terms for all DEGs 
 
 ```{r}
 read.csv(file="../results/Adult_FB_DEGs.csv") %>% 
   mutate(GO = strsplit(as.character(Gene.ontology.IDs), ";")) %>% 
     unnest(GO) %>%
-select(GO) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+select(Entry, GO) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 ```
 
-
-
-
-
-
-## ADD DEG COMPARISON AMONG POPULATION HERE 
 ======== 
 
+# Differential Gene Expression Analysis by _population_ (all parental pCO2 exposure, combined)
+
+```{r}
+# Here are all the possible contrasts I can make 
+levels(dds.adult.DESeq$population)
+
+print("Comparison: Dabob Bay vs. Fidalgo Bay")
+summary(res.adult.DBFB <- results(dds.adult.DESeq, contrast=c("population", "Dabob Bay", "Fidalgo Bay"), alpha=0.05))
+
+print("Comparison: Dabob Bay vs. Oyster Bay C1")
+summary(res.adult.DBOB1 <- results(dds.adult.DESeq, contrast=c("population", "Dabob Bay", "Oyster Bay C1"), alpha=0.05))
+
+print("Comparison: Fidalgo Bay vs. Oyster Bay C1")
+summary(res.adult.FBOB1 <- results(dds.adult.DESeq, contrast=c("population", "Fidalgo Bay", "Oyster Bay C1"), alpha=0.05))
+```
+## Count # of genes diff expressed  (p-value <0.05) in each population comparison 
+
+```{r}
+paste("No. of genes differentially expressed (padj<0.05) between Dabob & Fidalgo adult:",  sum(res.adult.DBFB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) between Dabob & Oyster Bay C1 adult:",  sum(res.adult.DBOB1$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) between Fidalgo & Oyster Bay C1 adult:",  sum(res.adult.FBOB1$padj < 0.05, na.rm=TRUE))
+```
+
+## Save population vs. population DEG lists for later comparisons 
+
+```{r}
+diffex.adult.DBFB <- subset(res.adult.DBFB, padj < 0.05)
+diffex.adult.DBOB1 <- subset(res.adult.DBOB1, padj < 0.05)
+diffex.adult.FBOB1 <- subset(res.adult.FBOB1, padj < 0.05)
+
+# save all R objects to file for integration 
+save(diffex.adult.DBFB, file="../results/diffex.adult.DBFB")
+save(diffex.adult.DBOB1, file="../results/diffex.adult.DBOB1")
+save(diffex.adult.FBOB1, file="../results/diffex.adult.FBOB1")
+
+# merge and select unique genes for PCA 
+degs.adult.pops <- c(rownames(diffex.adult.DBFB), 
+  rownames(diffex.adult.DBOB1),
+  rownames(diffex.adult.FBOB1)) %>% unique()
+save(degs.adult.pops, file="../results/degs.adult.pops")
+```
+
+## Generate PCA with only differentially expressed genes among population 
+
+This PCA represents the physiological differences among populations/cohorts of Olympia oyster adults, ctenidia tissue
+
+```{r}
+# PCA with points color coded by tissue and pco2 factors 
+#ggplotly(
+  plotPCA(vsd.adult[degs.adult.pops,], intgroup=c("population")) + 
+           ggtitle("Adult PCA by population, DEGs only (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))) + 
+  theme_minimal()#, tooltip = "text")
+```
+
+```{r}
+# generate heatmap of population DEGs  
+vsd.adult.df <- as.data.frame(colData(vsd.adult)[,c("population", "pCO2.parent")])
+
+pheatmap(assay(vsd.adult[degs.adult.pops,]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
+         cluster_cols=T, annotation_col=vsd.adult.df[1], scale="row", main = "DEGs among populations")
+```
+
+Are there any DEGs common among all 3 population comparisons? 
+
+```{r}
+Reduce(intersect, list(rownames(diffex.adult.DBFB),rownames(diffex.adult.DBOB1),rownames(diffex.adult.FBOB1)))
+```
+
+Enrichment Analysis using all DEGs identified in any pairwise population comparison 
+
+```{r}
+# DEGs in ANY pairwise comparison
+filter(Olurida_gene_uniprot, 
+       Name %in% c(rownames(diffex.adult.DBFB),rownames(diffex.adult.DBOB1),rownames(diffex.adult.FBOB1) %>% unique())) %>% 
+  select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# All genes for background
+filter(Olurida_gene_uniprot, 
+       Name %in% c(rownames(res.adult.DBFB),rownames(res.adult.DBOB1),rownames(res.adult.FBOB1) %>% unique())) %>% 
+  select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+```
+
+Read in GO terms for Revigo
+
+```{r}
+read_delim(file="../results/Adult_FB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
+  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
+
+read_delim(file="../results/Adult_DB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
+  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
+```

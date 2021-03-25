@@ -7,7 +7,6 @@ output: html_document
 
 ```{r}
 getwd()
-write_delim()
 ```
 
 ### Load libraries and source scripts 
@@ -28,15 +27,18 @@ lapply(list.of.packages, FUN = function(X) {
 ### Inspect total counts by sample for larval samples 
 ```{r}
 load(file = "../results/gene-counts-filtered") #object = counts.filtered
-load(file="../raw-data/key")
+load(file="../raw-data/key.filtered")
 
-#ggplotly(
-ggplot(data = data.frame(colSums(counts.filtered)) %>% 
+juvenile.samples <- key.filtered %>% filter(stage=="juvenile") %>% select(sample) %>% unlist() %>% as.vector() %>% as.character()
+
+ggplotly(
+ggplot(data = counts.filtered %>%
+         select(juvenile.samples) %>%
+         colSums() %>% data.frame() %>%
                   dplyr::rename(count.total = 1) %>% 
-                  rownames_to_column(var="sample") %>% 
-                  filter(grepl("_juvenile", sample))) +
-           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample, juvenile ctenidia tissue") + 
-             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+                  rownames_to_column(var="sample"))  +
+           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample, juvenile (whole-body)") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()))
 ```
 ### Load transformed counts object
 
@@ -46,13 +48,13 @@ load(file = "../results/gene-counts-trans") #object = counts.t
 
 #### If warranted, check out sample key  
 ```{r}
-key %>% filter(stage=="juvenile") %>% select(sample, population, temp.parent, pCO2.parent)
+key.filtered %>% filter(stage=="juvenile") %>% select(sample, population, temp.parent, pCO2.parent)
 ```
 
 
 ### Extract juvenile samples only
 ```{r}
-counts.t.juv <- as.data.frame(counts.t[grepl(".juvenile", rownames(counts.t)), ])
+counts.t.juv <- as.data.frame(counts.t[juvenile.samples, ])
 counts.t.juv[,1:3] #take a peak at the resulting dataframe 
 ```
 ## Optional 
@@ -69,13 +71,12 @@ print(paste("# of genes dropped:", ncol(counts.t.juv) - ncol(counts.ts.juv), sep
 ### How many genes were identified in each sample?
 
 ```{r}
-#ggplotly(
+ggplotly(
 ggplot(data = data.frame(rowSums(counts.t.juv != 0)) %>% 
                   dplyr::rename(count.total = 1) %>% 
-                  rownames_to_column(var="sample") %>% 
-                  filter(grepl("_juvenile", sample))) +
-           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total # genes by sample, juvenile whole body") + 
-             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())#) 
+                  rownames_to_column(var="sample")) +
+           geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total # genes by sample after pre-filtering, juveniles") + 
+             theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())) 
 ```
 
 ## Use foa.plots to visualize data a bit: 
@@ -106,8 +107,8 @@ ggplot(data = data.frame(rowSums(counts.t.juv != 0)) %>%
 ### Merge sample key info to count data, then sort, and generate heat map for initial inspection by treatment 
 ```{r}
 # merge count data with sample key, reset row names as sample names, and arrange by infection, then temperature, then day 
-counts.tsk.juv <- merge(x=key, by.x="sample_stage", y=counts.ts.juv, by.y="row.names") %>% 
-  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample_stage") 
+counts.tsk.juv <- merge(x=key.filtered, by.x="sample", y=counts.ts.juv, by.y="row.names") %>% 
+  arrange(stage, population, pCO2.parent)  %>% column_to_rownames(var="sample") 
 
 head(counts.tsk.juv[1:24]) #check out results of merge/arrange
 #counts.tsk.juv %>% dplyr::select(starts_with("OLUR")) #this is code to get only the gene columns 
@@ -167,7 +168,8 @@ NOTE: Hover over points to see the sample numbers
 # PCA with points color coded by population 
 #ggplotly(
 plotPCA(vsd.juv, intgroup="population") + 
-           ggtitle("PCA by population (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.juv)))#, tooltip = "text")
+           ggtitle("PCA by population (var-stabilizing transformed)") + theme_minimal() + 
+  geom_point(size=3, aes(text=colnames(vsd.juv)))#, tooltip = "text")
 
 # PCA with points color coded by parental pCO2 exposure 
 #ggplotly(
@@ -178,6 +180,14 @@ plotPCA(vsd.juv, intgroup="pCO2.parent") +
 #ggplotly(
   plotPCA(vsd.juv, intgroup=c("population","pCO2.parent")) + 
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.juv)))#, tooltip = "text")
+  
+# PCA with same 2 colors for all populations (for prelim. results presentation)
+ggplotly(
+  plotPCA(vsd.juv, intgroup=c("population","pCO2.parent")) + 
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + 
+    geom_point(size=4, aes(text=colnames(vsd.juv), label=colnames(vsd.juv))) + 
+    scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4")) + 
+    geom_text(aes(label=colnames(vsd.juv)), nudge_x=3, nudge_y=1.5, size=3), tooltip = "text")
 ```
 
 ### Generate heat maps before & after transformation  
@@ -239,7 +249,7 @@ paste("No. of genes differentially expressed (padj<0.05) by pCO2, juvenile ctend
 print(diffex.juv <- subset(res.juv.pco2, padj < 0.05)) #extract stats for genes that are diff. expressed among parental pCO2, all pops combined 
 
 diffex.juv.counts <- subset(counts(dds.juv.DESeq), rownames(dds.juv.DESeq) %in% rownames(diffex.juv)) 
-diffex.juv.counts <- diffex.juv.counts[,subset(key, stage=="juvenile")$sample_stage]
+diffex.juv.counts <- diffex.juv.counts[,subset(key.filtered, stage=="juvenile")$sample]
 ```
 
 ## Heatmap of differentially expressed genes, both populations 
@@ -251,6 +261,59 @@ all(colnames(diffex.juv.counts) == rownames(dds.juv.df)) #double check that samp
 
 pheatmap(diffex.juv.counts, cluster_rows=T, show_rownames=T, cluster_columns=T, na.rm=TRUE, scale="row", main = "Gene Counts, all differentially expressed genes by parental pCO2, all juveniles", annotation_col=dds.juv.df[c(2)], color=rev(c("dodgerblue3", "goldenrod1")), fontsize = 7)
 ```
+
+# Differential Gene Expression Analysis by _population_ (all parental pCO2 exposure, combined)
+
+```{r}
+# Here are all the possible contrasts I can make 
+levels(dds.juv.DESeq$population)
+
+print("Comparison: Dabob Bay vs. Fidalgo Bay")
+summary(res.juv.DBFB <- results(dds.juv.DESeq, contrast=c("population", "Dabob Bay", "Fidalgo Bay"), alpha=0.05))
+```
+## Count # of genes diff expressed  (p-value <0.05) in each population comparison 
+
+```{r}
+paste("No. of genes differentially expressed (padj<0.05) between Dabob & Fidalgo juveniles:",  sum(res.juv.DBFB$padj < 0.05, na.rm=TRUE))
+```
+## Save population vs. population DEG lists for later comparisons 
+
+```{r}
+diffex.juv.DBFB <- subset(res.juv.DBFB, padj < 0.05)
+
+# save all R objects to file for integration 
+save(diffex.juv.DBFB, file="../results/diffex.larvae.DBFB")
+
+# merge and select unique genes for PCA 
+degs.juv.pops <- c(rownames(diffex.juv.DBFB))
+save(degs.juv.pops, file="../results/degs.juv.pops")
+```
+
+## Generate PCA with only differentially expressed genes among population 
+
+This PCA represents the physiological differences among populations/cohorts of Olympia oyster larvae, upon maternal liberation. 
+
+```{r}
+# PCA with points color coded by tissue and pco2 factors 
+#ggplotly(
+  plotPCA(vsd.juv[degs.juv.pops,], intgroup=c("population")) + 
+           ggtitle("Juvenile PCA by population, DEGs (var-stabilizing transformed)") + 
+  geom_point(size=3, aes(text=colnames(vsd.juv))) + theme_minimal()#, tooltip = "text")
+```
+
+```{r}
+# generate heatmap of population DEGs  
+vsd.juv.df <- as.data.frame(colData(vsd.juv)[,c("population", "pCO2.parent")])
+
+pheatmap(assay(vsd.juv[degs.juv.pops,]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
+         cluster_cols=T, annotation_col=vsd.juv.df[1], scale="row", main = "DEGs among populations")
+```
+
+
+
+
+
+
 
 # Juveniles: Differential Gene Expression Analysis by _parental pCO2 exposure within population_ 
 
@@ -296,10 +359,10 @@ diffex.juv.DB <- subset(res.juv.DB, padj < 0.05)
 
 ```{r}
 diffex.juv.FB.counts <- subset(counts(dds.juv.DESeq), rownames(dds.juv.DESeq) %in% rownames(diffex.juv.FB)) 
-diffex.juv.FB.counts <- diffex.juv.FB.counts[,subset(key, stage=="juvenile" & population=="Fidalgo Bay")$sample_stage]
+diffex.juv.FB.counts <- diffex.juv.FB.counts[,subset(key.filtered, stage=="juvenile" & population=="Fidalgo Bay")$sample]
 
 diffex.juv.DB.counts <- subset(counts(dds.juv.DESeq), rownames(dds.juv.DESeq) %in% rownames(diffex.juv.DB))
-diffex.juv.DB.counts <- diffex.juv.DB.counts[,subset(key, stage=="juvenile" & population=="Dabob Bay")$sample_stage]
+diffex.juv.DB.counts <- diffex.juv.DB.counts[,subset(key.filtered, stage=="juvenile" & population=="Dabob Bay")$sample]
 ```
 
 # generate heatmap with differentially expressed genes within FB 
@@ -439,3 +502,6 @@ Extract GO terms for genes that are deferentially expressed in DB
 - protein ubiquitination involved in ubiquitin-dependent protein catabolic process  
 - protein K63-linked ubiquitination  
 - proteasomal protein catabolic process  
+
+
+

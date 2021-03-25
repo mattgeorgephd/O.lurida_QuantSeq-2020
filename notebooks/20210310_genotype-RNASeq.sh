@@ -25,75 +25,73 @@ samtools="/gscratch/srlab/programs/samtools-1.10/samtools"
 # Here are various important paths
 # trimmed QuantSeq fastq files: /gscratch/srlab/lhs3/data/QuantSeq2020
 # O.lurida genome: /gscratch/srlab/lhs3/data/Olurida_QuantSeq2020-trimmed/
-# Aligned QuantSeq reads: /gscratch/srlab/lhs3/jobs/20210314_Olurida_QuantSeq-Genotype-all/mapped/
-# gatk files:  /gscratch/srlab/lhs3/jobs/20210314_Olurida_QuantSeq-Genotype-all/gatk/
+# Aligned QuantSeq reads: /gscratch/scrubbed/lhs3/20210314_Olurida_QuantSeq-Genotype-all/mapped/
+# gatk files:  /gscratch/scrubbed/lhs3/20210314_Olurida_QuantSeq-Genotype-all/gatk/
 
 homedir="/gscratch/srlab/lhs3/"
 jobdir="/gscratch/srlab/lhs3/jobs/20210314_Olurida_QuantSeq-Genotype-all/"
 outputdir="/gscratch/scrubbed/lhs3/20210314_Olurida_QuantSeq-Genotype-all/"
 
 # Make directories that don't yet exist
-##mkdir ${homedir}data/Olurida_v081_concat/
-##mkdir ${outputdir}mapped/
-##mkdir ${outputdir}gatk/
+mkdir ${homedir}data/Olurida_v081_concat/
+mkdir ${outputdir}mapped/
+mkdir ${outputdir}gatk/
 
 # Concatenate Oly genome contigs into ~30 super-contigs
-##echo "Starting genome concatenation"
-##awk -v i=5314 -f ${homedir}code/merge_contigs.awk.txt ${homedir}data/Olurida_v081.fa > ${homedir}data/Olurida_v081_concat/Olurida_v081_concat.fa
+echo "Starting genome concatenation"
+awk -v i=5314 -f ${homedir}code/merge_contigs.awk.txt ${homedir}data/Olurida_v081.fa > ${homedir}data/Olurida_v081_concat/Olurida_v081_concat.fa
 
 # Edit fasta headers in place from concatenated IDs to the range (e.g. "Contig0 Contig1 Contig2" to "Contig0:2")
 
 # First remove all horizontal white spaces between contigIDs, save to new fasta file 
-##cat ${homedir}data/Olurida_v081_concat/Olurida_v081_concat.fa | tr -d "[:blank:]" > ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa #remove all horizontal white spaces between contigIDs
+cat ${homedir}data/Olurida_v081_concat/Olurida_v081_concat.fa | tr -d "[:blank:]" > ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa #remove all horizontal white spaces between contigIDs
 
-##n_contigs_old=$(grep ">" ${homedir}data/Olurida_v081.fa | wc -l) #number of contigs in original fasta 
-##d="${n_contigs_old//[^[:digit:]]/}" #Return ID of last/highest number contig
-##digits=$(echo ${#d}) #number of digits in the last contig
-##n_contigs_new=$(grep ">" ${homedir}data/Olurida_v081_concat/Olurida_v081_concat.fa | wc -l) #number of contigs in concatenated genome
-##n=$(seq 1 1 $n_contigs_new) #vector of 1:# of contigs in concat. genome
+n_contigs_old=$(grep ">" ${homedir}data/Olurida_v081.fa | wc -l) #number of contigs in original fasta 
+d="${n_contigs_old//[^[:digit:]]/}" #Return ID of last/highest number contig
+digits=$(echo ${#d}) #number of digits in the last contig
+n_contigs_new=$(grep ">" ${homedir}data/Olurida_v081_concat/Olurida_v081_concat.fa | wc -l) #number of contigs in concatenated genome
+n=$(seq 1 1 $n_contigs_new) #vector of 1:# of contigs in concat. genome
 
 # loop over each new contig header, paste first and last ID # together and replace concat header with new ID 
-##for i in $n
-##do
-##old=$(grep ">" ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa | sed "${i}q;d")
-##start=$(echo $old | grep -o -E '[0-9]{1,6}' | head -n 1) #If needed, change the 6 to match the value in $digits 
-##startID=$(echo ">Contig"$start)
-##end=$(echo $old | grep -o -E '[0-9]{1,6}' | tail -n 1) #If needed, change the 6 to match the value in $digits 
-##new=$(echo ">Contig"$start"_"$end)
-##sed -i.bak "s|$startID.*|$new|" ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa # edit fasta in place. 
-##done
+for i in $n
+do
+old=$(grep ">" ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa | sed "${i}q;d")
+start=$(echo $old | grep -o -E '[0-9]{1,6}' | head -n 1) #If needed, change the 6 to match the value in $digits 
+startID=$(echo ">Contig"$start)
+end=$(echo $old | grep -o -E '[0-9]{1,6}' | tail -n 1) #If needed, change the 6 to match the value in $digits 
+new=$(echo ">Contig"$start"_"$end)
+sed -i.bak "s|$startID.*|$new|" ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa # edit fasta in place. 
+done
 
 # Index concatenated genome 
-##echo "Indexing concatenated and re-headed fasta" 
-##${samtools} faidx ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa
+echo "Indexing concatenated and re-headed fasta" 
+${samtools} faidx ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa
 
 # Create bowtie2 index for concatenated Oly genome 
-##echo "Building bowtie2 genome index"
-##${bowtie2}bowtie2-build \
-##${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa \
-##${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa >> "${jobdir}01-bowtie2-build.txt" 2>&1
+echo "Building bowtie2 genome index"
+${bowtie2}bowtie2-build \
+${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa \
+${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa >> "${jobdir}01-bowtie2-build.txt" 2>&1
 
 # Align trimmed reads to concatenated genome 
-#cd ${homedir}data/QuantSeq2020/
-##cd ${homedir}data/QuantSeq2020/
-##echo "Aligning reads" 
+cd ${homedir}data/QuantSeq2020/
+echo "Aligning reads" 
 
-##for file in *.trim.fastq
-##do
-##sample="$(basename -a $file | cut -d "." -f 1)"
-##map_file="$sample.bowtie.sam"
+for file in *.trim.fastq
+do
+sample="$(basename -a $file | cut -d "." -f 1)"
 
 # run Bowtie2 on each file
-##${bowtie2}bowtie2 \
-##--local \
-##-x ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa \
-##--sensitive-local \
-##--threads 8 \
-##--no-unal \
-##-k 5 \
-##-U $file \
-##-S ${outputdir}mapped/$map_file; \
-##done >> ${jobdir}02-bowtieout.txt 2>&1
+${bowtie2}bowtie2 \
+--local \
+-x ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa \
+--sensitive-local \
+--threads 8 \
+--no-unal \
+-k 5 \
+-U $file \
+-S ${outputdir}mapped/$sample.bowtie.sam; \
+done >> ${jobdir}02-bowtieout.txt 2>&1
 
 cd ${outputdir}mapped/
 
@@ -103,8 +101,7 @@ echo "Convert aligned .sam to .bam"
 for file in *.bowtie.sam
 do
 sample="$(basename -a $file | cut -d "." -f 1)"
-sorted_file="$sample.sorted.bam"
-${samtools} view -b $file | ${samtools} sort -o $sorted_file
+${samtools} view -b $file | ${samtools} sort -o $sample.sorted.bam
 done >> "${jobdir}03-sam2sortedbam.txt" 2>&1
 
 # Deduplicate using picard (within gatk), output will have duplicates removed 
@@ -112,12 +109,11 @@ done >> "${jobdir}03-sam2sortedbam.txt" 2>&1
 echo "Deduplicating bams"
 for file in *sorted.bam
 do
-sample="$(basename -a $file | cut -b 1,2,3)"
-dedup_file="$sample.dedup.bam"
+sample="$(basename -a $file | cut -d "." -f 1)"
 
 ${gatk} MarkDuplicates \
 I=$file \
-O="${outputdir}gatk/$dedup_file" \
+O="${outputdir}gatk/$sample.dedup.bam" \
 M="${outputdir}gatk/$sample.dup_metrics.txt" \
 REMOVE_DUPLICATES=true
 done >> "${jobdir}04-dedup_stout.txt" 2>&1
@@ -136,22 +132,20 @@ ${gatk} CreateSequenceDictionary \
 echo "Splitting reads spanning splice junctions (SplitNCigarReads)"
 for file in *dedup.bam
 do
-sample="$(basename -a $file | cut -b 1,2,3)"
-results_file="$sample.dedup-split.bam"
+sample="$(basename -a $file | cut -d "." -f 1)"
 
 # split CigarN reads
 ${gatk} SplitNCigarReads \
 -R ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa \
 -I $file \
--O "$results_file"
+-O $sample.dedup-split.bam
 done >> "${jobdir}06-CigarNSplit_stout.txt" 2>&1
 
 # Add read group ID to bams (needed by gatk)
 echo "Adding read group to bams" 
 for file in *dedup-split.bam
 do
-sample="$(basename -a $file | cut -b 1,2,3)"
-results_file="$sample.dedup-split-RG.bam" 
+sample="$(basename -a $file | cut -d "." -f 1)"
 
 # add read group info to headers, specifying sample names 
 ${gatk} AddOrReplaceReadGroups \
@@ -175,7 +169,7 @@ done >> "${jobdir}08-index-bams.txt" 2>&1
 echo "Calling variants using HaplotypeCaller"
 for file in *dedup-split-RG.bam
 do
-sample="$(basename -a $file | cut -b 1,2,3)"
+sample="$(basename -a $file | cut -d "." -f 1)"
 
 ${gatk} HaplotypeCaller \
 -R ${homedir}data/Olurida_v081_concat/Olurida_v081_concat_rehead.fa \
@@ -185,11 +179,11 @@ ${gatk} HaplotypeCaller \
 done >> "${jobdir}09-HaplotypeCaller_stout.txt" 2>&1
 
 # create sample map of all gvcfs
+rm sample_map.txt  #remove if already exists 
 echo "Creating sample map of all gvcfs"
 for file in *variants.g.vcf
 do
-sample="$(basename -a $file | cut -b 1,2,3)"
-file="$sample.variants.g.vcf"
+sample="$(basename -a $file | cut -d "." -f 1)"
 echo -e "$sample\t$file" >> sample_map.txt
 done
 
@@ -200,6 +194,7 @@ awk 'BEGIN {FS="\t"}; {print $1 FS "0" FS $2}' ${homedir}data/Olurida_v081_conca
 # Aggregate single-sample GVCFs into GenomicsDB
 # Note: the intervals file requires a specific name - e.g. for .bed format, it MUST be "intervals.bed"
 echo "Aggregating single-sample GVCFs into GenomicsDB"
+rm -r GenomicsDB/ #can't already have a GenomicsDB directory, else will fail 
 ${gatk} GenomicsDBImport \
 --genomicsdb-workspace-path GenomicsDB/ \
 -L intervals.bed \
