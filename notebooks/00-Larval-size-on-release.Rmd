@@ -12,17 +12,20 @@ knitr::opts_chunk$set(echo = TRUE)
 #### Load libraries 
 
 ```{r, message=FALSE, warning=FALSE}
-library(ggplot2)
-library(dplyr)
-library(car)
-library(arm)
-library(here)
+list.of.packages <- c("ggplot2", "tidyverse", "car", "arm", "here") #add new libraries here 
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# Load all libraries 
+lapply(list.of.packages, FUN = function(X) {
+  do.call("require", list(X)) 
+})
 ```
 
 #### Load data and reformat 
 
 ```{r}
-larvae.size <- read.csv(here("data", "2019-08_new-larvae-measurements.csv"), header=T, stringsAsFactors = F)
+larvae.size <- read.csv(here("raw-data", "2019-08_new-larvae-measurements.csv"), header=T, stringsAsFactors = F)
 larvae.size[c("Sample", "Population", "Temperature", "pH")] <- lapply(larvae.size[c("Sample", "Population", "Temperature", "pH")], factor)
 larvae.size$DateCollected <- as.Date(larvae.size$DateCollected, format = "%m/%d/%y")
 ```
@@ -94,13 +97,13 @@ print(cohort.all <- ggplot(larvae.size, aes(x=Population, y=MaxFeret)) + geom_bo
 #### Save plots 
 
 ```{r, message=FALSE, results=FALSE}
-png("../plots/larval-max-min-all.png")
+png("../results/larval-max-min-all.png")
 max.min.all
 dev.off()
-png("../plots/larval-max-feret-all.png")
+png("../results/larval-max-feret-all.png")
 max.all
 dev.off()
-png("../plots/larval-min-feret-all.png")
+png("../results/larval-min-feret-all.png")
 min.all
 dev.off()
 ```
@@ -108,10 +111,11 @@ dev.off()
 ####  Summarize mean shell height and width for each larval sample   
 
 ```{r}
-larvae.size.mean <- larvae.size %>%
+larvae.size.mean <- larvae.size %>% 
           group_by(Population, Temperature, pH, Sample) %>%
           summarise(MaxFeret.mean=mean(MaxFeret.cor), MinFeret.mean=mean(MinFeret.cor),
                     Circ.mean=mean(Circularity),  date=median(DateCollected))
+save(larvae.size.mean, file = "../results/larvae.size.mean")
 ```
 
 #### Generate plots with average length by parental treatment 
@@ -132,16 +136,16 @@ print(max.mean.date <- ggplot(larvae.size.mean, aes(x=date, y=MaxFeret.mean)) + 
 #### Save plots 
 
 ```{r, message=FALSE, results=FALSE}
-png("../plots/larval-max-feret-mean.png")
+png("../results/larval-max-feret-mean.png")
 min.mean
 dev.off()
-png("../plots/larval-min-feret-mean.png")
+png("../results/larval-min-feret-mean.png")
 max.mean
 dev.off()
-png("../plots/larval-max-feret-mean-cohort.png")
+png("../results/larval-max-feret-mean-cohort.png")
 max.mean.cohort
 dev.off()
-png("../plots/larval-max-feret-mean-date.png")
+png("../results/larval-max-feret-mean-date.png")
 max.mean.date
 dev.off()
 ```

@@ -7,6 +7,9 @@ output: html_document
 
 ```{r}
 getwd()
+install.packages("PopGenome")
+library(PopGenome)
+?readData
 ```
 
 ### Load libraries and source scripts 
@@ -140,8 +143,8 @@ all(rownames(counts.tsk.larvae) == counts.tsk.larvae %>% dplyr::select(starts_wi
 #key.DESeq <- counts.tsk.larvae[-which(rownames(counts.tsk.larvae) %in% "571_larvae"),c("population", "pCO2.parent")] 
 
 dds.larvae <- DESeqDataSetFromMatrix(countData = counts.tsk.larvae[,grepl("OLUR", colnames(counts.tsk.larvae))] %>% t(),
-                              colData = counts.tsk.larvae[,c("population", "pCO2.parent", "week.collected", "larval.day.collected")],
-                              design = ~ week.collected + population + pCO2.parent)
+                              colData = counts.tsk.larvae[,c("population", "temp.parent", "pCO2.parent", "week.collected", "prep.batch", "larval.day.collected")],
+                              design = ~ population + temp.parent + pCO2.parent)
 ```
 
 # Visualize data via PCAs and heat maps 
@@ -159,17 +162,17 @@ vsd.larvae <- varianceStabilizingTransformation(dds.larvae, blind=FALSE)
 NOTE: Hover over points to see the sample numbers
 
 ```{r}
-# PCA with points color coded by week larvae were collected 
-ggplotly(
-plotPCA(vsd.larvae, intgroup="week.collected") + 
-           ggtitle("PCA by population (var-stabilizing transformed)") + 
-  geom_point(size=3) + theme_minimal(), tooltip = "text")
-
 # PCA with points color coded by population 
-#ggplotly(
+ggplotly(
 plotPCA(vsd.larvae, intgroup="population") + 
            ggtitle("PCA by population (var-stabilizing transformed)") + 
-  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal()#, tooltip = "text")
+  geom_point(aes(size=vsd.larvae$larval.day.collected, text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
+
+# PCA with points color coded by parental temperature treatment
+ggplotly(
+plotPCA(vsd.larvae, intgroup="temp.parent") + 
+           ggtitle("PCA by population (var-stabilizing transformed)") + 
+  geom_point(size=3) + theme_minimal(), tooltip = "text")
 
 # PCA with points color coded by parental pCO2 exposure 
 ggplotly(
@@ -177,9 +180,9 @@ plotPCA(vsd.larvae, intgroup="pCO2.parent") +
            ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + 
   geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
 
-# PCA with points color coded by week collected & parental pCO2 exposure 
+# PCA with points color coded by temperature & parental pCO2 exposure 
 ggplotly(
-plotPCA(vsd.larvae, intgroup=c("week.collected", "pCO2.parent")) + 
+plotPCA(vsd.larvae, intgroup=c("temp.parent", "pCO2.parent")) + 
            ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + 
   geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
 
@@ -189,9 +192,9 @@ plotPCA(vsd.larvae, intgroup=c("population","pCO2.parent")) +
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + 
   geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
 
-# PCA with points color coded by week collected, population, and pco2 factors 
+# PCA with points color coded by population, temperature, and pco2 factors 
 ggplotly(
-plotPCA(vsd.larvae, intgroup=c("population","pCO2.parent")) + 
+plotPCA(vsd.larvae, intgroup=c("population","temp.parent", "pCO2.parent")) + 
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + 
   geom_point(aes(size=vsd.larvae$larval.day.collected, text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
 
@@ -201,6 +204,21 @@ ggplotly(
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + 
     geom_point(size=4, aes(text=colnames(vsd.larvae))) + 
     scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4")), tooltip = "text")
+
+# Check out other random effects 
+
+# PCA with points color coded by library prep batch 
+ggplotly(
+plotPCA(vsd.larvae, intgroup=c("prep.batch")) + 
+           ggtitle("PCA by population (var-stabilizing transformed)") + 
+  geom_point(size=3) + theme_minimal(), tooltip = "text")
+
+# PCA with points color coded by time period colelcted (1, 2)
+ggplotly(
+plotPCA(vsd.larvae, intgroup=c("week.collected")) + 
+           ggtitle("PCA by population (var-stabilizing transformed)") + 
+  geom_point(size=3) + theme_minimal(), tooltip = "text")
+
 ```
 
 ### Generate heat maps before & after transformation  
@@ -249,10 +267,10 @@ design(dds.larvae)
 
 ```{r}
 dds.larvae.DESeq <- DESeq(dds.larvae) 
-```
+``
 # Larvae: Differential Gene Expression Analysis by _week collected_ (all populations combined)
 
-```{r}
+``{r}
 print("Comparison: period 1 vs. period 2")
 summary(results(dds.larvae.DESeq, contrast=c("week.collected", "1", "2"), alpha=0.05))
 ```
@@ -265,6 +283,17 @@ summary(res.larvae.pco2 <- results(dds.larvae.DESeq, contrast=c("pCO2.parent", "
 paste("No. of genes differentially expressed (padj<0.05) by pCO2, larvae, comparison across all pops:",  sum(res.larvae.pco2$padj < 0.05, na.rm=TRUE))
 # nope
 ```
+
+# Larvae: Differential Gene Expression Analysis by _parental temperature exposure_ (all populations combined)
+
+```{r}
+levels(dds.larvae.DESeq$temp.parent)
+print("Comparison: parental temperature - All populations")
+summary(res.larvae.pco2 <- results(dds.larvae.DESeq, contrast=c("temp.parent", "6", "10"), alpha=0.05))
+paste("No. of genes differentially expressed (padj<0.05) by parent temperature, larvae, comparison across all pops:",  sum(res.larvae.pco2$padj < 0.05, na.rm=TRUE))
+# nope
+```
+
 # Larvae: Differential Gene Expression Analysis by _population_ (all parental pCO2 exposure, combined)
 
 ```{r}
@@ -347,6 +376,26 @@ pheatmap(assay(vsd.larvae[degs.larvae.pops,]), cluster_rows=T, show_rownames=FAL
          cluster_cols=T, annotation_col=vsd.larvae.df[1], scale="row", main = "DEGs among populations")
 ```
 
+# Larvae: Differential Gene Expression Analysis by _parental temperature & pCO2 exposure_ (all populations combined)
+
+```{r}
+# Add a factor that defines interaction between pco2 and temperature 
+dds.larvae.DESeq$temp.pCO2 <- factor(paste0(dds.larvae.DESeq$temp.parent, dds.larvae.DESeq$pCO2.parent))
+design(dds.larvae.DESeq) <- ~ temp.pCO2 
+dds.larvae.DESeq <- DESeq(dds.larvae.DESeq)
+```
+
+```{r}
+levels(dds.larvae.DESeq$temp.pCO2)
+
+print("Comparison: parental temperature & pCO2 - All populations")
+summary(res.larvae.6 <- results(dds.larvae.DESeq, contrast=c("temp.pCO2", "6Ambient", "6High"), alpha=0.05))
+summary(res.larvae.10 <- results(dds.larvae.DESeq, contrast=c("temp.pCO2", "10Ambient", "10High"), alpha=0.05))
+summary(res.larvae.6a10h <- results(dds.larvae.DESeq, contrast=c("temp.pCO2", "6Ambient", "10High"), alpha=0.05))
+summary(res.larvae.6h10a <- results(dds.larvae.DESeq, contrast=c("temp.pCO2", "6High", "10Ambient"), alpha=0.05))
+# no DEGs! 
+```
+
 # Larvae: Differential Gene Expression Analysis by _Parental pCO2, within each population_ 
 
 ```{r}
@@ -423,6 +472,185 @@ ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
     ggtitle(rownames(diffex.larvae.FB)) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
+```{r}
+# Add a factor that defines interaction between population, temperature, and pco2 
+dds.larvae.DESeq$pop.temp.pCO2 <- factor(paste0(dds.larvae.DESeq$population, dds.larvae.DESeq$temp.parent, dds.larvae.DESeq$pCO2.parent))
+design(dds.larvae.DESeq) <- ~ pop.temp.pCO2 
+dds.larvae.DESeq <- DESeq(dds.larvae.DESeq)
+```
+
+```{r}
+levels(dds.larvae.DESeq$pop.temp.pCO2)
+
+print("Comparison: parental temperature & pCO2 - within each population")
+summary(res.larvae.FB6 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Fidalgo Bay6Ambient", "Fidalgo Bay6High"), alpha=0.05))
+summary(res.larvae.FB10 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Fidalgo Bay10Ambient","Fidalgo Bay10High"), alpha=0.05))
+summary(res.larvae.FB6a10h <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Fidalgo Bay6Ambient", "Fidalgo Bay10High"), alpha=0.05))
+summary(res.larvae.FB6h10a <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Fidalgo Bay10Ambient", "Fidalgo Bay6High"), alpha=0.05)) # 2 DEGs 
+
+summary(res.larvae.DB6 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2","Dabob Bay6Ambient","Dabob Bay6High"), alpha=0.05))
+summary(res.larvae.DB10 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Dabob Bay10Ambient","Dabob Bay10High"), alpha=0.05))
+summary(res.larvae.DB6a10h <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Dabob Bay6Ambient", "Dabob Bay10Ambient"), alpha=0.05)) # 1 DEG
+summary(res.larvae.DB6h10a <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Dabob Bay6High", "Dabob Bay10Ambient"), alpha=0.05)) # 1 DEG 
+
+summary(res.larvae.OB16 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Oyster Bay C16Ambient","Oyster Bay C16High"), alpha=0.05)) # 2 DEGs 
+summary(res.larvae.OB110 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Oyster Bay C110Ambient","Oyster Bay C110High"), alpha=0.05)) # 3 DEGs 
+summary(res.larvae.OB16a10h <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Oyster Bay C16Ambient", "Oyster Bay C110High"), alpha=0.05)) 
+summary(res.larvae.OB16h10a <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Oyster Bay C16High", "Oyster Bay C110Ambient"), alpha=0.05))
+
+summary(res.larvae.OB26 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Oyster Bay C26Ambient","Oyster Bay C26High"), alpha=0.05))
+summary(res.larvae.OB210 <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Oyster Bay C210Ambient","Oyster Bay C210High"), alpha=0.05))
+summary(res.larvae.OB26a10h <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2",  "Oyster Bay C26Ambient", "Oyster Bay C210High"), alpha=0.05)) # 1 DEG
+summary(res.larvae.OB26h10a <- results(dds.larvae.DESeq, contrast=c("pop.temp.pCO2", "Oyster Bay C26High", "Oyster Bay C210Ambient"), alpha=0.05))
+```
+
+```{r}
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, FB 6H vs. 10A larvae:",  sum(res.larvae.FB6h10a$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, DB 6A vs. 10H larvae:",  sum(res.larvae.DB6a10h$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, DB 6H vs. 10A larvae:",  sum(res.larvae.DB6h10a$padj < 0.05, na.rm=TRUE)) 
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, OB1 6A vs. 6H larvae:",  sum(res.larvae.OB16$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, OB1 10A vs. 10H larvae:",  sum(res.larvae.OB110$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, OB2 6A vs. 10H larvae:",  sum(res.larvae.OB26a10h$padj < 0.05, na.rm=TRUE))
+```
+
+## Extract stats for significantly different genes expressed in pop+temp+pco2 comparisons   
+
+```{r}
+diffex.larvae.FB6h10a <- subset(res.larvae.FB6h10a, padj < 0.05)
+diffex.larvae.DB6a10h <- subset(res.larvae.DB6a10h, padj < 0.05)
+diffex.larvae.DB6h10a <- subset(res.larvae.DB6h10a, padj < 0.05)
+diffex.larvae.OB16 <- subset(res.larvae.OB16, padj < 0.05)
+diffex.larvae.OB110 <- subset(res.larvae.OB110, padj < 0.05)
+diffex.larvae.OB26a10h <- subset(res.larvae.OB26a10h, padj < 0.05)
+```
+
+## Extract counts for DEGs in pop+temp+pco2 comparisons   
+
+```{r}
+diffex.larvae.FB6h10a.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.FB6h10a)) 
+diffex.larvae.FB6h10a.counts <- diffex.larvae.FB6h10a.counts[,subset(key.filtered, stage=="larvae" & population=="Fidalgo Bay" & (temp_pco2=="6_High" | temp_pco2=="10_Ambient"))$sample, drop=FALSE]
+
+diffex.larvae.DB6a10h.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.DB6a10h)) 
+diffex.larvae.DB6a10h.counts <- diffex.larvae.DB6a10h.counts[,subset(key.filtered, stage=="larvae" & population=="Dabob Bay" & (temp_pco2=="6_Ambient" | temp_pco2=="10_High"))$sample, drop=FALSE]
+
+diffex.larvae.DB6h10a.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.DB6h10a)) 
+diffex.larvae.DB6h10a.counts <- diffex.larvae.DB6h10a.counts[,subset(key.filtered, stage=="larvae" & population=="Dabob Bay" & (temp_pco2=="6_High" | temp_pco2=="10_Ambient"))$sample, drop=FALSE]
+
+diffex.larvae.OB16.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.OB16)) 
+diffex.larvae.OB16.counts <- diffex.larvae.OB16.counts[,subset(key.filtered, stage=="larvae" & population=="Oyster Bay C1" & temp.parent=="6")$sample, drop=FALSE]
+
+diffex.larvae.OB110.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.OB110)) 
+diffex.larvae.OB110.counts <- diffex.larvae.OB110.counts[,subset(key.filtered, stage=="larvae" & population=="Oyster Bay C1" & temp.parent=="10")$sample, drop=FALSE]
+
+diffex.larvae.OB26a10h.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.OB26a10h)) 
+diffex.larvae.OB26a10h.counts <- diffex.larvae.OB26a10h.counts[,subset(key.filtered, stage=="larvae" & population=="Oyster Bay C2" & (temp_pco2=="6_Ambient" | temp_pco2=="10_High"))$sample, drop=FALSE]
+```
+
+## Plot gene counts for DEGs in pop+temp+pco2 comparisons   
+
+```{r}
+# Are any genes annotated? A couple 
+Olurida_gene_uniprot %>% filter(Name %in% 
+  c(rownames(diffex.larvae.FB6h10a.counts),
+  rownames(diffex.larvae.DB6a10h.counts),
+  rownames(diffex.larvae.DB6h10a.counts),
+  rownames(diffex.larvae.OB16.counts),
+  rownames(diffex.larvae.OB110.counts),
+  rownames(diffex.larvae.OB26a10h.counts))) %>% 
+  select(contig, start, end, Name, Note, SPID)
+
+# FB 6-High vs. 10-Ambient
+for (i in 1:nrow(diffex.larvae.FB6h10a.counts)) {
+a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.FB6h10a.counts)[i], intgroup=c("pop.temp.pCO2"), returnData = TRUE)
+print(ggplot(subset(a, pop.temp.pCO2=="Fidalgo Bay6High" | pop.temp.pCO2=="Fidalgo Bay10Ambient") %>% 
+               rownames_to_column("sample"),
+       aes(x=pop.temp.pCO2, y=count, color=pop.temp.pCO2, label=sample)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text() +
+    theme_bw() +
+    ggtitle(rownames(diffex.larvae.FB6h10a.counts)[i]) +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+
+# DB 6-Ambient vs. 10-High
+for (i in 1:nrow(diffex.larvae.DB6a10h.counts)) {
+a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.DB6a10h.counts)[i], intgroup=c("pop.temp.pCO2"), returnData = TRUE)
+print(ggplot(subset(a, pop.temp.pCO2=="Dabob Bay6Ambient" | pop.temp.pCO2=="Dabob Bay10High") %>% 
+               rownames_to_column("sample"),
+       aes(x=pop.temp.pCO2, y=count, color=pop.temp.pCO2, label=sample)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text() +
+    theme_bw() +
+    ggtitle(rownames(diffex.larvae.DB6a10h.counts)[i]) +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+
+# DB 6-High vs. 10-Ambient
+for (i in 1:nrow(diffex.larvae.DB6h10a.counts)) {
+a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.DB6h10a.counts)[i], intgroup=c("pop.temp.pCO2"), returnData = TRUE)
+print(ggplot(subset(a, pop.temp.pCO2=="Dabob Bay6High" | pop.temp.pCO2=="Dabob Bay10Ambient") %>% 
+               rownames_to_column("sample"),
+       aes(x=pop.temp.pCO2, y=count, color=pop.temp.pCO2, label=sample)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text() +
+    theme_bw() +
+    ggtitle(rownames(diffex.larvae.DB6h10a.counts)[i]) +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+
+# OB1 6-Ambient vs. 6-High
+for (i in 1:nrow(diffex.larvae.OB16.counts)) {
+a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.OB16.counts)[i], intgroup=c("pop.temp.pCO2"), returnData = TRUE)
+print(ggplot(subset(a, pop.temp.pCO2=="Oyster Bay C16Ambient" | pop.temp.pCO2=="Oyster Bay C16High") %>% 
+               rownames_to_column("sample"),
+       aes(x=pop.temp.pCO2, y=count, color=pop.temp.pCO2, label=sample)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text() +
+    theme_bw() +
+    ggtitle(rownames(diffex.larvae.OB16.counts)[i]) +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+
+# OB1 10-Ambient vs. 10-High
+for (i in 1:nrow(diffex.larvae.OB110.counts)) {
+a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.OB110.counts)[i], intgroup=c("pop.temp.pCO2"), returnData = TRUE)
+print(ggplot(subset(a, pop.temp.pCO2=="Oyster Bay C110Ambient" | pop.temp.pCO2=="Oyster Bay C110High") %>% 
+               rownames_to_column("sample"),
+       aes(x=pop.temp.pCO2, y=count, color=pop.temp.pCO2, label=sample)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text() +
+    theme_bw() +
+    ggtitle(rownames(diffex.larvae.OB110.counts)[i]) +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+ 
+# OB2 6-Ambient vs. 10-High
+for (i in 1:nrow(diffex.larvae.OB26a10h.counts)) {
+a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.OB26a10h.counts)[i], intgroup=c("pop.temp.pCO2"), returnData = TRUE)
+print(ggplot(subset(a, pop.temp.pCO2=="Oyster Bay C26Ambient" | pop.temp.pCO2=="Oyster Bay C210High") %>% 
+               rownames_to_column("sample"),
+       aes(x=pop.temp.pCO2, y=count, color=pop.temp.pCO2, label=sample)) +
+  geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text() +
+    theme_bw() +
+    ggtitle(rownames(diffex.larvae.OB26a10h.counts)[i]) +
+    theme(plot.title = element_text(hjust = 0.5)))
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Add Time Factor - Larvae: Differential Gene Expression Analysis by _Parental pCO2, within each population & time period_
 
@@ -493,6 +721,14 @@ ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
     theme_bw() +
     ggtitle(rownames(diffex.larvae.2FB)) +
     theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+# Can I compare size to gene expression?
+
+```{r}
+load(file = "../results/larvae.size.mean")
+larvae.size.mean
 ```
 
 

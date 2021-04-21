@@ -24,7 +24,7 @@ lapply(list.of.packages, FUN = function(X) {
 })
 ```
 
-### Inspect total counts by sample for larval samples 
+### Inspect total counts by sample for adult samples 
 ```{r}
 load(file = "../results/gene-counts-filtered") #object = counts.filtered
 load(file="../raw-data/key.filtered") #object = key
@@ -58,8 +58,21 @@ counts.t.adult[,1:3] #take a peak at the resulting dataframe
 ```{r}
 keep <- colSums(counts.t.adult) >= 10
 counts.ts.adult <- counts.t.adult[,keep]
+
 print(paste("# genes remaining after pre-filtering:", ncol(counts.ts.adult)))
 print(paste("# of genes dropped:", ncol(counts.t.adult) - ncol(counts.ts.adult), sep=" "))
+
+# What's the average no. of genes per sample? 
+data.frame(rowSums(counts.t.adult != 0)) %>% 
+                  dplyr::rename(count.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% summarise(mean=mean(count.total), sd=sd(count.total), se=sd/sqrt(length(sample)))
+
+# No. of reads per sample? 
+data.frame(rowSums(counts.t.adult)) %>% 
+                  dplyr::rename(read.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% #summary() 
+summarise(mean=mean(read.total), sd=sd(read.total), se=sd/sqrt(length(sample))) #use this to average across all samples 
+
 ```
 
 ### How many genes were identified in each sample?
@@ -147,6 +160,8 @@ dds.adult <- DESeqDataSetFromMatrix(countData = counts.tsk.adult[,grepl("OLUR", 
 
 # Visualize data via PCAs and heat maps 
 
+# HERE: REDO PCA USING CODE FROM MULTIVARIATE STATS 
+
 ## Transform data 
 
 - Here we transform counts using a variance stabilizing transformation (VST), since the rlog transformation threw an error and suggested using VST.  
@@ -172,7 +187,8 @@ ggplotly(
   plotPCA(vsd.adult, intgroup="pCO2.parent") + 
            ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
 
-# PCA with points color coded by tissue and pco2 factors 
+
+# PCA with points color coded by population and pco2 factors 
 ggplotly(
   plotPCA(vsd.adult, intgroup=c("population","pCO2.parent")) + 
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
@@ -245,12 +261,13 @@ summary(res.adult.pco2 <- results(dds.adult.DESeq, contrast=c("pCO2.parent", "Am
 paste("No. of genes differentially expressed (padj<0.05) by pCO2, adult ctendia, comparison across all pops:",  sum(res.adult.pco2$padj < 0.05, na.rm=TRUE))
 res.adult.pco2
 ```
+
 Heatmap, DEGs among pCO2 exposure (not considering population)
 Not super convincing! 
 ```{r}
 diffex.adult <- subset(res.adult.pco2, padj < 0.05)
 diffex.adult.counts <- subset(counts(dds.adult.DESeq), rownames(dds.adult.DESeq) %in% rownames(diffex.adult)) 
-diffex.adult.counts <- diffex.adult.FB.counts[,subset(key.filtered, stage=="adult")$sample]
+diffex.adult.counts <- diffex.adult.counts[,subset(key.filtered, stage=="adult")$sample]
 dds.adult.df <- as.data.frame(colData(dds.adult)[,c("population", "pCO2.parent")])
 dds.adult.df <- dds.adult.df[match(colnames(diffex.adult.counts), rownames(dds.adult.df)),]
 all(colnames(diffex.adult.counts) == rownames(dds.adult.df)) #double check that samples are still in same order 
@@ -268,6 +285,18 @@ dds.adult.DESeq$group <- factor(paste0(dds.adult.DESeq$population, dds.adult.DES
 design(dds.adult.DESeq) <- ~ group 
 dds.adult.grp.DESeq <- DESeq(dds.adult.DESeq)
 ```
+# 
+
+```{r}
+# Check Cooks distances to see if one sample is consistently higher than others (i.e. has many outliers)
+par(mar=c(8,5,2,2))
+boxplot(log10(assays(dds.adult.grp.DESeq)[["cooks"]]), range=0, las=2)
+# looks pretty good  
+
+# plot dispersion estimates 
+plotDispEsts(dds.adult.grp.DESeq) #looks like the example in the tutorial - not worried about dispersion
+```
+
 
 ## Extract differential expression results / comparisons among different factors 
 
@@ -315,7 +344,7 @@ diffex.adult.DB.counts <- subset(counts(dds.adult.grp.DESeq), rownames(dds.adult
 diffex.adult.DB.counts <- diffex.adult.DB.counts[,subset(key.filtered, stage=="adult" & population=="Dabob Bay")$sample]
 
 diffex.adult.OB1.counts <- subset(counts(dds.adult.grp.DESeq), rownames(dds.adult.grp.DESeq) %in% rownames(diffex.adult.OB1))
-#diffex.adult.OB1.counts <- diffex.adult.OB1.counts[,subset(key.filtered, stage=="adult" & population=="Oyster Bay C1")$sample]
+diffex.adult.OB1.counts <- diffex.adult.OB1.counts[,subset(key.filtered, stage=="adult" & population=="Oyster Bay C1")$sample]
 ```
 
 # generate heatmap with differentially expressed genes within FB 
@@ -352,6 +381,63 @@ pheatmap(diffex.adult.DB.counts[rownames(diffex.adult.DB[order(diffex.adult.DB$p
          main = "(Adults) DB DEGs by direct pCO2 exposure, ordered by p-value", annotation_col=dds.adult.df.DB[2], 
          color=c("dodgerblue3", "goldenrod1"))
 ```
+
+```{r}
+adult.FB.p05.names <-rownames(diffex.adult.FB[order(diffex.adult.FB$padj),])
+adult.DB.p05.names <-rownames(diffex.adult.DB[order(diffex.adult.DB$padj),])
+count_plots = list()
+
+#plot FB DEGs to find any 
+for (i in 1:length(adult.FB.p05.names)) {
+a <-  plotCounts(dds.adult.DESeq, gene=adult.FB.p05.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+b <- ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
+       aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+  geom_point(position=position_jitter(w = 0.1,h = 0)) +
+    geom_text() +
+    theme_bw() +
+    ggtitle(adult.FB.p05.names[i]) +
+    theme(plot.title = element_text(hjust = 0.5))
+count_plots[[i]] <- b
+}
+count_plots
+
+#plot DB DEGs to find any issues 
+for (i in 1:length(adult.DB.p05.names)) {
+a <-  plotCounts(dds.adult.DESeq, gene=adult.DB.p05.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+b <- ggplot(subset(a, population=="Dabob Bay") %>% rownames_to_column("sample"),
+       aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+  geom_point(position=position_jitter(w = 0.1,h = 0)) +
+    geom_text() +
+    theme_bw() +
+    ggtitle(adult.DB.p05.names[i]) +
+    theme(plot.title = element_text(hjust = 0.5))
+count_plots[[i]] <- b
+}
+count_plots
+```
+
+## Genes that aren't convincing (aka only 1 or 2 samples had higher expression in a treatment): 
+
+### Fidalgo Bay
+- OLUR_00026074  
+- OLUR_00015132  
+- OLUR_00018477    
+- OLUR_00024224  
+
+### Dabob Bay 
+- OLUR_00004613  
+- OLUR_00013617  
+- OLUR_00021421  
+- OLUR_00020678
+- OLUR_00031169  
+- OLUR_00016878  
+- OLUR_00000822  
+- OLUR_00003610  
+- OLUR_00000097  
+- OLUR_00001769  
+- OLUR_00019562  
+- OLUR_00004194  
+
 # Plot single differentially expressed genes within OB1
 
 ```{r}
@@ -384,7 +470,7 @@ ggplotly(ggplot(subset(a, population!="Oyster Bay C1") %>% rownames_to_column("s
   mutate(population="OB1")) %>%
   rownames_to_column(var = "Name"),
   Olurida_gene_uniprot %>% select(contig, start, end, Name, Note, SPID),
-  by="Name"))
+  by="Name")) 
 ```
 Any DEGs the same in multiple populations?
 
@@ -393,6 +479,12 @@ Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.DB), rown
 Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.DB))) #4 the same 
 Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.OB1))) #none
 Reduce(intersect, list(rownames(diffex.adult.DB),rownames(diffex.adult.OB1))) #none
+
+#Any DEGs in the all-pop analysis also in within-pop analyses?
+Reduce(intersect, list(rownames(diffex.adult),rownames(diffex.adult.FB))) %>% length()  #yes, 10
+Reduce(intersect, list(rownames(diffex.adult),rownames(diffex.adult.DB))) %>% length() #yes, 32
+Reduce(intersect, list(rownames(diffex.adult),rownames(diffex.adult.OB1))) %>% length() #no
+Reduce(intersect, list(rownames(diffex.adult),rownames(diffex.adult.FB), rownames(diffex.adult.DB))) %>% length()  #the 4 common in FB & DB are also found in the all-pop model 
 ```
 
 What are the genes that are DEGs in both FB and DB?
@@ -418,7 +510,7 @@ b <- ggplot(subset(a, population!="Oyster Bay C1") %>% rownames_to_column("sampl
     ggtitle(adult.all.DEGs.names[i]) +
     theme(plot.title = element_text(hjust = 0.5, size = 10), axis.text.x = element_blank(),
           axis.text.y = element_text(size=6),
-          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "right") +
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "bottom") +
   scale_color_manual(values = c("#377eb8","#4daf4a"))
 count_plots.adult[[i]] <- b
 }
@@ -608,3 +700,31 @@ read_delim(file="../results/Adult_DB_DEGs_EnrichedBP.txt", delim = "\t") %>%
   mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
   mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
 ```
+
+# RESULTS SYNOPSIS FOR PAPER - ADULTS 
+
+```{r}
+# SUMMARY STATS OF FILTERED READS/GENES READY FOR ANSLYSES 
+print(paste("# of genes dropped before analysis:", ncol(counts.t.adult) - ncol(counts.ts.adult), sep=" "))
+print(paste("Total # genes for analysis:", ncol(counts.ts.adult)))
+
+a <- data.frame(rowSums(counts.t.adult != 0)) %>% 
+                  dplyr::rename(count.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% summarise(mean=mean(count.total), sd=sd(count.total), se=sd/sqrt(length(sample)))
+print(paste("Per-sample average no. of genes:", round(a$mean), "+/- SD", round(a$sd)))
+
+b <- data.frame(rowSums(counts.t.adult)) %>% 
+                  dplyr::rename(read.total = 1) %>% 
+                  rownames_to_column(var="sample") %>% 
+summarise(min=min(read.total), max=max(read.total), mean=mean(read.total), sd=sd(read.total), se=sd/sqrt(length(sample))) 
+print(paste("Per-sample range and average no. of reads with error rates: ", round(b$min), "-", round(b$max), " ", round(b$mean), " +/- SD ", round(b$sd), sep=""))
+
+# DEG ANAYSIS
+paste("No. of genes differentially expressed (padj<0.05) by pCO2, adult ctendia, comparison across all pops:",  sum(res.adult.pco2$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Fidalgo Bay adult ctenidia:",  sum(res.adult.FB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Dabob Bay adult ctenidia:",  sum(res.adult.DB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Oyster Bay Cohort1 adult ctenidia:",  sum(res.adult.OB1$padj < 0.05, na.rm=TRUE))
+
+
+```
+

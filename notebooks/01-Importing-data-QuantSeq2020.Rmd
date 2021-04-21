@@ -38,11 +38,13 @@ lapply(list.of.packages, FUN = function(X) {
 
 ```{r}
 sample.info <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
-          mutate_at(vars(lane, temp.parent,week.collected), as.factor) %>% 
+          mutate_at(vars(lane, temp.parent,week.collected,prep.batch ), as.factor) %>% 
           mutate_at(vars(RNA.conc, bioan.mean.bp), funs(as.numeric)) %>%
           mutate_at(vars(larval.date.collected), funs(as.Date)) %>%
   mutate(sample=gsub("b", "", sample)) %>% #get rid of the few "b"'s in sample #'s (they were re-extracted)
-          mutate(sample_stage=paste(sample, stage, sep="_"))
+          mutate(sample_stage=paste(sample, stage, sep="_")) %>%
+          mutate(temp_pco2=paste(temp.parent, pCO2.parent, sep="_"))
+save(sample.info, file="../raw-data/sample.info")
   
 filenames <- data.frame(read.table("../qc-processing/featureCounts/filenames-deduplicated.txt", header = F, stringsAsFactors = F, fill = FALSE)) %>%
           dplyr::rename(filename = 1) %>%
@@ -53,10 +55,6 @@ filenames <- data.frame(read.table("../qc-processing/featureCounts/filenames-ded
 filenames[filenames$filename == "Und","sample_stage"] <- "Undetermined"
 
 key <- full_join(sample.info, filenames)
-
-(test <- read.csv("../raw-data/quantseq2020_key.csv", header=T, na.strings = NA) %>%
-          select(sample, stage, population, pCO2.parent) %>% filter(stage=="juvenile") %>%
-    droplevels())
 ```
 
 ### Import counts matrix file as dataframe, extract sample # from file/column names to simplify them 
@@ -154,7 +152,7 @@ chart.Correlation(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17
 Samples 35, 412, and 44 have very low counts, similar to sample 571 which was the no-tissue control, prepared alongside larval samples. 
 
 ```{r}
-remove.list <- c("Undetermined", multiqc.stats %>% filter(pcr.cycles>17) %>% select(Sample) %>% unlist() %>% as.vector()) 
+remove.list <- c("Undetermined", (multiqc.stats %>% filter(pcr.cycles>17))$Sample) 
 counts.filtered <- counts[ , -which(names(counts) %in% remove.list)] %>% mutate_at(vars(starts_with("feature")), as.character)
 ncol(counts.filtered)
 key.filtered <- key[ -which(key$sample %in% remove.list), ]
@@ -170,6 +168,14 @@ ggplotly(ggplot(data = data.frame(colSums(counts.filtered)) %>%
            geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample") +
              theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()))
 ```
+
+## How many samples in final data set?
+
+```{r}
+#multiqc.stats %>% filter(pcr.cycles<=17) %>% group_by(stage, population, pCO2.parent) %>% count() %>% View()
+```
+
+
 ## OPTIONAL: Remove genes that were in the No-Tissue Control, look at counts again  
 
 ```{r}

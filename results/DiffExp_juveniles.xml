@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<Session genome="https://owl.fish.washington.edu/halfshell/genomic-databank/Olurida_v081.fa" hasGeneTrack="false" hasSequenceTrack="true" locus="Contig63903:1-31144" path="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/results/DiffExp_juveniles.xml" version="8">
+<Session genome="https://owl.fish.washington.edu/halfshell/genomic-databank/Olurida_v081.fa" hasGeneTrack="false" hasSequenceTrack="true" locus="Contig74666:1-10374" nextAutoscaleGroup="2" path="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/results/DiffExp_juveniles.xml" version="8">
     <Resources>
         <Resource path="diffex.juvFB.bed"/>
         <Resource path="../references/20190709-Olurida_v081.stringtie.gtf"/>
@@ -23,14 +23,14 @@
         <Resource path="../qc-processing/gatk/185.dedup-split.bam"/>
         <Resource path="../qc-processing/gatk/161.dedup-split.bam"/>
     </Resources>
-    <Panel height="870" name="DataPanel" width="1903">
+    <Panel height="835" name="DataPanel" width="1423">
         <Track clazz="org.broad.igv.track.SequenceTrack" fontSize="10" id="Reference sequence" name="Reference sequence" visible="true"/>
         <Track clazz="org.broad.igv.track.FeatureTrack" color="0,0,178" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/references/Olurida_v081-20190709.gene.gff" name="Olurida_v081-20190709.gene.gff" visible="true"/>
         <Track clazz="org.broad.igv.track.FeatureTrack" color="0,0,178" displayMode="EXPANDED" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/references/20190709-Olurida_v081.stringtie.gtf" name="20190709-Olurida_v081.stringtie.gtf" visible="true"/>
         <Track clazz="org.broad.igv.track.FeatureTrack" color="0,0,178" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/results/diffex.juvFB.bed" name="diffex.juvFB.bed" visible="true"/>
         <Track clazz="org.broad.igv.track.FeatureTrack" color="0,0,178" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/results/diffex.juvDB.bed" name="diffex.juvDB.bed" visible="true"/>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="102,204,255" colorScale="ContinuousColorScale;0.0;22.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/137.dedup-split.bam_coverage" name="DB-Amb_137.dedup-split.bam" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="31.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="15.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/137.dedup-split.bam_junctions" name="137.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/137.dedup-split.bam" name="137.dedup-split.bam" visible="false">
@@ -44,7 +44,7 @@
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="102,204,255" colorScale="ContinuousColorScale;0.0;14.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/140.dedup-split.bam_coverage" name="DB-Amb_140.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="18.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/140.dedup-split.bam_junctions" name="140.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/140.dedup-split.bam" name="140.dedup-split.bam" visible="false">
@@ -58,77 +58,77 @@
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="153,255,204" colorScale="ContinuousColorScale;0.0;12.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/156.dedup-split.bam_coverage" name="FB-Amb_156.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="48.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/156.dedup-split.bam_junctions" name="156.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/156.dedup-split.bam" name="156.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="102,255,153" colorScale="ContinuousColorScale;0.0;10.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/159.dedup-split.bam_coverage" name="FB-Amb_159.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="27.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/159.dedup-split.bam_junctions" name="159.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/159.dedup-split.bam" name="159.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="102,255,153" colorScale="ContinuousColorScale;0.0;10.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/161.dedup-split.bam_coverage" name="FB-Amb_161.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="132.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/161.dedup-split.bam_junctions" name="161.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/161.dedup-split.bam" name="161.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="102,255,153" colorScale="ContinuousColorScale;0.0;10.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/162.dedup-split.bam_coverage" name="FB-Amb_162.dedup-split.bam.Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="28.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/162.dedup-split.bam_junctions" name="162.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/162.dedup-split.bam" name="162.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="51,51,255" colorScale="ContinuousColorScale;0.0;10.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/168.dedup-split.bam_coverage" name="DB-High_168.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="23.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="11.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/168.dedup-split.bam_junctions" name="168.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/168.dedup-split.bam" name="168.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="51,51,255" colorScale="ContinuousColorScale;0.0;23.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/169.dedup-split.bam_coverage" name="DB-High_169.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="53.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="22.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/169.dedup-split.bam_junctions" name="169.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/169.dedup-split.bam" name="169.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="51,51,255" colorScale="ContinuousColorScale;0.0;10.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/171.dedup-split.bam_coverage" name="DB-High_171.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="20.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="22.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/171.dedup-split.bam_junctions" name="171.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/171.dedup-split.bam" name="171.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="51,51,255" colorScale="ContinuousColorScale;0.0;13.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/172.dedup-split.bam_coverage" name="DB-High_172.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="17.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/172.dedup-split.bam_junctions" name="172.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/172.dedup-split.bam" name="172.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,153,153" colorScale="ContinuousColorScale;0.0;10.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/181.dedup-split.bam_coverage" name="FB-High_181.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="17.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/181.dedup-split.bam_junctions" name="181.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/181.dedup-split.bam" name="181.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,153,153" colorScale="ContinuousColorScale;0.0;60.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/183.dedup-split.bam_coverage" name="FB-High_183.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="14.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/183.dedup-split.bam_junctions" name="183.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/183.dedup-split.bam" name="183.dedup-split.bam" visible="false">
             <RenderOptions/>
         </Track>
         <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,153,153" colorScale="ContinuousColorScale;0.0;51.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/184.dedup-split.bam_coverage" name="FB-High_184.dedup-split.bam Coverage" snpThreshold="0.2" visible="true" windowFunction="null">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="11.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/184.dedup-split.bam_junctions" name="184.dedup-split.bam Junctions" visible="false"/>
         <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/184.dedup-split.bam" name="184.dedup-split.bam" visible="false">
@@ -142,10 +142,10 @@
             <RenderOptions/>
         </Track>
     </Panel>
-    <Panel height="265" name="Panel1614899449333" width="1903">
+    <Panel height="265" name="Panel1614899449333" width="1423">
         <Track clazz="org.broad.igv.variant.VariantTrack" color="0,0,178" displayMode="EXPANDED" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/gatk/juvenile_genotypes-SNPs-filteredtrue.vcf" name="juvenile_genotypes-SNPs-filteredtrue.vcf" siteColorMode="ALLELE_FREQUENCY" squishedHeight="1" visible="true"/>
     </Panel>
-    <PanelLayout dividerFractions="0.8461538461538461"/>
+    <PanelLayout dividerFractions="0.843609022556391"/>
     <Regions>
         <Region chromosome="Contig369" end="34970" start="1"/>
         <Region chromosome="Contig369" end="34970" start="1"/>
