@@ -14,7 +14,7 @@ getwd()
 ```{r, message=FALSE, warning=FALSE, results=FALSE}
 source("../references/biostats.R")
 
-list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "cowplot", "clipr") #add new libraries here 
+list.of.packages <- c("DESeq2", "RCurl", "tidyverse", "vegan", "pheatmap", "pastecs", "factoextra", "FactoMineR", "RColorBrewer", "tibble", "reshape2", "plotly", "cowplot", "clipr", "janitor", "ggpubr", "forcats") #add new libraries here 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -29,11 +29,11 @@ lapply(list.of.packages, FUN = function(X) {
 load(file = "../results/gene-counts-filtered") #object = counts.filtered
 load(file="../raw-data/key.filtered") #object = key
 
-adult.samples <- key.filtered %>% filter(stage=="adult") %>% select(sample) %>% unlist() %>% as.vector() %>% as.character()
+adult.samples <- key.filtered %>% filter(stage=="adult") %>% dplyr::select(sample) %>% unlist() %>% as.vector() %>% as.character()
 
 ggplotly(
 ggplot(data = counts.filtered %>%
-         select(adult.samples) %>%
+         dplyr::select(adult.samples) %>%
          colSums() %>% data.frame() %>%
                   dplyr::rename(count.total = 1) %>% 
                   rownames_to_column(var="sample"))  +
@@ -164,7 +164,7 @@ dds.adult <- DESeqDataSetFromMatrix(countData = counts.tsk.adult[,grepl("OLUR", 
 
 ## Transform data 
 
-- Here we transform counts using a variance stabilizing transformation (VST), since the rlog transformation threw an error and suggested using VST.  
+- Here we transform counts using a variance stabilizing transformation (VST), since we have many samples. 
 - Here we use `blind=FALSE` b/c we are interested in differences explained by experimental design, and may wish to use this transformed data in downstream analyses. 
 ```{r}
 vsd.adult <- varianceStabilizingTransformation(dds.adult, blind=FALSE)
@@ -180,26 +180,28 @@ ggplotly(
   plotPCA(vsd.adult, intgroup="population") + 
            ggtitle("PCA by population (var-stabilizing transformed)") + 
     geom_point(size=3, aes(text=colnames(vsd.adult))) + 
-    theme_minimal(), tooltip = "text")
+    theme_minimal()+ stat_ellipse(), tooltip = "text")
 
 # PCA with points color coded by parental pCO2 exposure 
 ggplotly(
   plotPCA(vsd.adult, intgroup="pCO2.parent") + 
-           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
+           ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))) + stat_ellipse() + theme_minimal(), tooltip = "text")
 
 
 # PCA with points color coded by population and pco2 factors 
 ggplotly(
   plotPCA(vsd.adult, intgroup=c("population","pCO2.parent")) + 
-           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))), tooltip = "text")
+           ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult)))+ stat_ellipse(), tooltip = "text")
 
 # PCA with same 2 colors for all populations (for prelim. results presentation)
 ggplotly(
   plotPCA(vsd.adult, intgroup=c("population","pCO2.parent")) + 
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + geom_point(size=4, aes(text=colnames(vsd.adult))) + 
     scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4")), tooltip = "text")
-```
 
+PCA.data.adult <- plotPCA(vsd.adult, intgroup=c("population","pCO2.parent"), returnData=TRUE)
+save(PCA.data.adult, file="../results/PCA.data.adult")
+```
 
 ### Generate heat maps before & after transformation  
 
@@ -224,15 +226,15 @@ A heatmap of this distance matrix gives us an overview over similarities and dis
 ```{r}
 colors <- colorRampPalette(rev(brewer.pal(9, "Blues")) )(255)
 
-sampleDists <- dist(t(assay(vsd.adult)))
-sampleDistMatrix <- as.matrix(sampleDists)
+sampleDists.adults <- dist(t(assay(vsd.adult)))
+sampleDistMatrix.adults <- as.matrix(sampleDists.adults)
 
 # Here we show pCO2.parent + population 
-rownames(sampleDistMatrix) <- paste(vsd.adult$population, vsd.adult$pCO2.parent, sep="-") #set row names 
-colnames(sampleDistMatrix) <- NULL
-pheatmap(sampleDistMatrix,
-         clustering_distance_rows=sampleDists,
-         clustering_distance_cols=sampleDists,
+rownames(sampleDistMatrix.adults) <- paste(vsd.adult$population, vsd.adult$pCO2.parent, sep="-") #set row names 
+colnames(sampleDistMatrix.adults) <- NULL
+pheatmap(sampleDistMatrix.adults,
+         clustering_distance_rows=sampleDists.adults,
+         clustering_distance_cols=sampleDists.adults,
          col=rev(colors), fontsize = 6)
 ```
 
@@ -271,11 +273,111 @@ diffex.adult.counts <- diffex.adult.counts[,subset(key.filtered, stage=="adult")
 dds.adult.df <- as.data.frame(colData(dds.adult)[,c("population", "pCO2.parent")])
 dds.adult.df <- dds.adult.df[match(colnames(diffex.adult.counts), rownames(dds.adult.df)),]
 all(colnames(diffex.adult.counts) == rownames(dds.adult.df)) #double check that samples are still in same order 
+
 pheatmap(diffex.adult.counts[rownames(diffex.adult[order(diffex.adult$padj),]),], cluster_rows=F, 
          show_rownames=FALSE, cluster_columns=TRUE, na.rm=TRUE, 
-         scale="row", main = "(Adults) DEGs by direct pCO2 exposure (all pops), clustered", 
+         scale="row", main = "(Adults) DEGs by direct pCO2 exposure (all pops), sorted by p-value", 
+         annotation_col=dds.adult.df, color=c("dodgerblue3", "goldenrod1"))
+
+pheatmap(diffex.adult.counts, cluster_rows=T, show_rownames=F, cluster_columns=T, na.rm=TRUE, 
+         scale="row", main = "(Adults) DEGs by direct pCO2 exposure, clustered", fontsize_col = 7, fontsize_row = 7, 
          annotation_col=dds.adult.df, color=c("dodgerblue3", "goldenrod1"))
 ```
+
+# Plot counts for DEGs across all populations 
+
+```{r}
+adult.p05.names <-rownames(diffex.adult[order(diffex.adult$padj),])
+count_plots = list()
+
+#plot FB DEGs to find any 
+for (i in 1:length(adult.p05.names)) {
+a <-  plotCounts(dds.adult.DESeq, gene=adult.p05.names[i], intgroup=c("pCO2.parent"), returnData = TRUE)
+b <- ggplot(a %>% rownames_to_column("sample"),
+       aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+  geom_point(position=position_jitter(w = 0.1,h = 0)) +
+    geom_text() +
+    theme_bw() +
+    ggtitle(adult.p05.names[i]) +
+    theme(plot.title = element_text(hjust = 0.5))
+count_plots[[i]] <- b
+}
+count_plots
+```
+
+```{r}
+p <- plotPCA(vsd.adult[adult.p05.names,], intgroup=c("pCO2.parent", "population"), returnData=T)
+
+p <- plotPCA(vsd.adult, intgroup=c("pCO2.parent", "population"), returnData=T)
+ggplot(p, aes(x=PC1, y=PC2, group=pCO2.parent, colour=pCO2.parent, shape=population)) + geom_point(size=4, alpha=0.8) + 
+  theme_minimal() + stat_ellipse() + ggtitle(expression(paste("PCA of all gene counts in adults by cohort & ", pCO[2], " exposure"))) +
+  xlab("PC1: 14% variance") + ylab("PC2: 10% variance") +
+  scale_shape_discrete(name="Cohort") + scale_color_discrete(name=expression(paste(pCO[2], " exposure")))
+```
+
+# Enrichment analysis, DEGs among pCO2 across all populations 
+
+Enrichment Analysis! 
+
+```{r}
+# DEGs between pCO2 
+diffex.adult %>% as.data.frame() %>% rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID, Note), by = c("gene"="Name")) %>% 
+  dplyr::select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# All genes (background)
+res.adult.pco2 %>% as.data.frame() %>% rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID), by = c("gene"="Name")) %>% 
+  dplyr::select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+```
+
+| Term | Count | Fold Enrichment | FDR |
+|-|-|-|-|
+| GO:0055114~oxidation-reduction process | 16 | 7.798607888631091 | 8.243364733269016E-8 |
+| GO:0006805~xenobiotic metabolic process | 3 | 27.401086956521738 | 0.3923019577707598 |
+| GO:0098869~cellular oxidant detoxification | 3 | 21.007499999999997 | 0.3923019577707598 |
+| GO:0006749~glutathione metabolic process | 3 | 19.097727272727273 | 0.3923019577707598 |
+| GO:0097267~omega-hydroxylase P450 pathway | 2 | 140.05 | 0.3923019577707598 |
+| GO:0060315~negative regulation of ryanodine-sensitive calcium-release channel activity | 2 | 140.05 | 0.3923019577707598 |
+| GO:0060316~positive regulation of ryanodine-sensitive calcium-release channel activity | 2 | 140.05 | 0.3923019577707598 |
+| GO:0002489~antigen processing and presentation of endogenous peptide antigen via MHC class Ib via ER pathway, TAP-dependent | 2 | 105.0375 | 0.3923019577707598 |
+| GO:0002485~antigen processing and presentation of endogenous peptide antigen via MHC class I via ER pathway, TAP-dependent | 2 | 105.0375 | 0.3923019577707598 |
+| GO:0002591~positive regulation of antigen processing and presentation of peptide antigen via MHC class I | 2 | 105.0375 | 0.3923019577707598 |
+| GO:0002481~antigen processing and presentation of exogenous protein antigen via MHC class Ib, TAP-dependent | 2 | 105.0375 | 0.3923019577707598 |
+| GO:0055085~transmembrane transport | 5 | 4.752828054298643 | 0.3923019577707598 |
+| GO:0008202~steroid metabolic process | 3 | 13.700543478260869 | 0.3923019577707598 |
+| GO:0006869~lipid transport | 3 | 13.40904255319149 | 0.3923019577707598 |
+| GO:0006629~lipid metabolic process | 4 | 6.513953488372094 | 0.3923019577707598 |
+| GO:0071243~cellular response to arsenic-containing substance | 2 | 84.03 | 0.3923019577707598 |
+| GO:0010880~regulation of release of sequestered calcium ion into cytosol by sarcoplasmic reticulum | 2 | 84.03 | 0.3923019577707598 |
+| GO:0042178~xenobiotic catabolic process | 2 | 70.025 | 0.4202584895201619 |
+| GO:0019852~L-ascorbic acid metabolic process | 2 | 70.025 | 0.4202584895201619 |
+| GO:0009812~flavonoid metabolic process | 2 | 52.51875 | 0.5299315105884214 |
+| GO:0045909~positive regulation of vasodilation | 2 | 46.68333333333334 | 0.5665058796300599 |
+| GO:0042446~hormone biosynthetic process | 2 | 42.015 | 0.5734235070083432 |
+| GO:0045332~phospholipid translocation | 2 | 42.015 | 0.5734235070083432 |
+| GO:0042403~thyroid hormone metabolic process | 2 | 38.195454545454545 | 0.5997213086754268 |
+| GO:0008152~metabolic process | 4 | 4.617032967032967 | 0.5997213086754268 |
+| GO:0006091~generation of precursor metabolites and energy | 2 | 35.0125 | 0.605978858881677 |
+| GO:0006855~drug transmembrane transport | 2 | 32.31923076923077 | 0.6307442328553533 |
+| GO:0006810~transport | 6 | 2.7048283261802575 | 0.6309987973836262 |
+| GO:0008544~epidermis development | 2 | 30.010714285714286 | 0.6309987973836262 |
+| GO:0051923~sulfation | 2 | 28.01 | 0.6520696101522573 |
+| GO:0019373~epoxygenase P450 pathway | 2 | 24.714705882352945 | 0.711973967729552 |
+| GO:0055088~lipid homeostasis | 2 | 20.00714285714286 | 0.8188345087017934 |
+| GO:0019369~arachidonic acid metabolic process | 2 | 20.00714285714286 | 0.8188345087017934 |
+
+Read in GO terms 
+
+```{r}
+load(file="../references/GOslim")
+
+# For REVIGO 
+read_delim(file="../results/Adult_allpops_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
+  mutate(GO = gsub("~", "", GO)) %>% dplyr::select(GO, PValue) %>% na.omit() %>% write_clip()
+```
+
 
 ## Now do comparisons of genes by parental pCO2 within populations: 
 
@@ -357,12 +459,6 @@ all(colnames(diffex.adult.FB.counts) == rownames(dds.adult.df.FB)) #double check
 pheatmap(diffex.adult.FB.counts, cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, 
          scale="row", main = "(Adults) FB DEGs by direct pCO2 exposure, clustered", 
          annotation_col=dds.adult.df.FB[2], color=c("dodgerblue3", "goldenrod1"))
-
-# sort genes (rows) by p-value 
-pheatmap(diffex.adult.FB.counts[rownames(diffex.adult.FB[order(diffex.adult.FB$padj),]),], 
-         cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, 
-         scale="row", main = "(Adults) FB DEGs by direct pCO2 exposure, sorted by p-value", 
-         annotation_col=dds.adult.df.FB[2], color=c("dodgerblue3", "goldenrod1"))
 ```
 
 # generate heatmap with differentially expressed genes within DB
@@ -374,11 +470,6 @@ all(colnames(diffex.adult.DB.counts) == rownames(dds.adult.df.DB)) #double check
 
 pheatmap(diffex.adult.DB.counts, cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", 
          main = "(Adults) DB DEGs by direct pCO2 exposure, clustered", annotation_col=dds.adult.df.DB[2], 
-         color=c("dodgerblue3", "goldenrod1"))
-
-pheatmap(diffex.adult.DB.counts[rownames(diffex.adult.DB[order(diffex.adult.DB$padj),]),], 
-         cluster_rows=F, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", 
-         main = "(Adults) DB DEGs by direct pCO2 exposure, ordered by p-value", annotation_col=dds.adult.df.DB[2], 
          color=c("dodgerblue3", "goldenrod1"))
 ```
 
@@ -456,6 +547,32 @@ ggplotly(ggplot(subset(a, population!="Oyster Bay C1") %>% rownames_to_column("s
           axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "none"))
 ```
 
+# Heat map of any pCO2-related DEG (all pops, DB, and FB) combined, showing all 3 populations. 
+
+```{r}
+diffex.adult.counts <- subset(counts(dds.adult.DESeq), rownames(dds.adult.DESeq) %in% unique(c(rownames(diffex.adult), rownames(diffex.adult.DB), rownames(diffex.adult.FB))))
+diffex.adult.counts <- diffex.adult.counts[,subset(key.filtered, stage=="adult")$sample]
+dds.adult.df <- as.data.frame(colData(dds.adult)[,c("population", "pCO2.parent")])
+dds.adult.df <- dds.adult.df[match(colnames(diffex.adult.counts), rownames(dds.adult.df)),]
+all(colnames(diffex.adult.counts) == rownames(dds.adult.df)) #double check that samples are still in same order 
+
+pheatmap(diffex.adult.counts[,rownames(dds.adult.df %>% filter(population=="Dabob Bay"))], cluster_rows=T, cluster_cols = F,
+         show_rownames=FALSE, show_colnames = FALSE, na.rm=TRUE, 
+         scale="row", main = "(Adults) All DEGs by direct pCO2 exposure, Dabob Bay", 
+         annotation_col=dds.adult.df[2])
+
+pheatmap(diffex.adult.counts[,rownames(dds.adult.df %>% filter(population=="Fidalgo Bay"))], cluster_rows=T, cluster_cols = F,
+         show_rownames=FALSE, show_colnames = FALSE, na.rm=TRUE, 
+         scale="row", main = "(Adults) All DEGs by direct pCO2 exposure, Fidalgo Bay", 
+         annotation_col=dds.adult.df[2])
+
+pheatmap(diffex.adult.counts[,rownames(dds.adult.df %>% filter(population=="Oyster Bay C1"))], cluster_rows=T, cluster_cols = F,
+         show_rownames=FALSE, show_colnames = FALSE, na.rm=TRUE, 
+         scale="row", main = "(Adults) All DEGs by direct pCO2 exposure, Oyster Bay", 
+         annotation_col=dds.adult.df[2])
+```
+
+
 ## Identify functions of DEGs 
 
 # IMPORTANT: the dataframe "adult.all.DEGs" contains all DEGs for each population with annotation information. These DEGs were identified for each population separately. 
@@ -469,9 +586,10 @@ ggplotly(ggplot(subset(a, population!="Oyster Bay C1") %>% rownames_to_column("s
   as.data.frame(diffex.adult.OB1) %>%
   mutate(population="OB1")) %>%
   rownames_to_column(var = "Name"),
-  Olurida_gene_uniprot %>% select(contig, start, end, Name, Note, SPID),
+  Olurida_gene_uniprot %>% dplyr::select(contig, start, end, Name, Note, SPID),
   by="Name")) 
 ```
+
 Any DEGs the same in multiple populations?
 
 ```{r}
@@ -499,19 +617,25 @@ Plot counts for the 4 DEGs common in both FB and DB
 ```{r}
 adult.all.DEGs.names <-adult.all.DEGs.common$Name
 
+adult.all.DEGs.common <- adult.all.DEGs.common %>% dplyr::select(Name, SPID) %>% 
+  mutate(Protein=c("Cytochrome P450 2B4 (CYP2B4)", 
+                   "Fatty acid-binding protein, adipocyte (FABP4)", 
+                   "Cytochrome P450 2U1 (CYP2UI)", "Thyroxine 5-deiodinase (DIO3)" ))
+
 count_plots.adult = list()
 for (i in 1:length(adult.all.DEGs.names)) {
 a <-  plotCounts(dds.adult.DESeq, gene=adult.all.DEGs.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
-b <- ggplot(subset(a, population!="Oyster Bay C1") %>% rownames_to_column("sample"),
+b <- ggplot(a %>% rownames_to_column("sample"), #subset(a, population!="Oyster Bay C1")
        aes(x=population:pCO2.parent, y=count, color=population, shape=pCO2.parent, label=sample)) +
   geom_point(size=3, position=position_jitter(w = 0.2,h = 0)) +
     #geom_text(size=3) +
     theme_bw() +
-    ggtitle(adult.all.DEGs.names[i]) +
+    ggtitle(adult.all.DEGs.common[i, "Protein"]) +
     theme(plot.title = element_text(hjust = 0.5, size = 10), axis.text.x = element_blank(),
           axis.text.y = element_text(size=6),
-          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "bottom") +
-  scale_color_manual(values = c("#377eb8","#4daf4a"))
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "right") +
+  scale_color_manual(values = c("#4daf4a","#377eb8", "#984ea3"), name="Cohort", guide = guide_legend(override.aes = list(size=4))) +
+  scale_shape(name="pCO2 exposure", guide = guide_legend(override.aes = list(size=4))) 
 count_plots.adult[[i]] <- b
 }
 plot_grid(plotlist=count_plots.adult) #plot them in a grid 
@@ -522,24 +646,24 @@ Enrichment Analysis!
 
 ```{r}
 # DEG in FB 
-diffex.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID, Note), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+diffex.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID, Note), by = c("gene"="Name")) %>% 
+  dplyr::select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 
 # All genes in FB (background)
-res.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+res.adult.FB %>% as.data.frame() %>% rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID), by = c("gene"="Name")) %>% 
+  dplyr::select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 
 # DEG in DB 
-diffex.adult.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+diffex.adult.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot, by = c("gene"="Name")) %>% View() # %>% dplyr::select(Name, SPID)
+  dplyr::select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 
 # All genes in DB (background)
-res.adult.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene, padj) %>% 
-  left_join(Olurida_gene_uniprot %>% select(Name, SPID), by = c("gene"="Name")) %>% 
-  select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+res.adult.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID), by = c("gene"="Name")) %>% 
+  dplyr::select(SPID) %>%  na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 ```
 
 ## Fidalgo Bay - Enriched functions in DEGs between pCO2 exposure 
@@ -583,26 +707,25 @@ res.adult.DB %>% as.data.frame() %>% rownames_to_column("gene") %>% select(gene,
 | GO:0000038~very long-chain fatty acid metabolic process | 2 | 2.94 | 0.096 | O35488, Q9R0H0 | 57 | 15 | 8403 | 19.7 | 1 |
 | GO:0051923~sulfation | 2 | 2.94 | 0.096 | Q95JD5, O43704 | 57 | 15 | 8403 | 19.7 | 1 |
 
+
 Read in GO terms for Revigo
 
 ```{r}
 read_delim(file="../results/Adult_FB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
   mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
-  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
+  mutate(GO = gsub("~", "", GO)) %>% dplyr::select(GO, PValue) %>% na.omit() %>% write_clip()
 
 read_delim(file="../results/Adult_DB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
   mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
-  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
+  mutate(GO = gsub("~", "", GO)) %>% dplyr::select(GO, PValue) %>% na.omit() %>% write_clip()
 ```
-
-
 Script to extract GO terms for all DEGs 
 
 ```{r}
 read.csv(file="../results/Adult_FB_DEGs.csv") %>% 
   mutate(GO = strsplit(as.character(Gene.ontology.IDs), ";")) %>% 
     unnest(GO) %>%
-select(Entry, GO) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+dplyr::select(Entry, GO) %>% na.omit() #%>% unlist() %>% as.vector() %>% write_clip()
 ```
 
 ======== 
@@ -649,24 +772,13 @@ degs.adult.pops <- c(rownames(diffex.adult.DBFB),
 save(degs.adult.pops, file="../results/degs.adult.pops")
 ```
 
-## Generate PCA with only differentially expressed genes among population 
-
-This PCA represents the physiological differences among populations/cohorts of Olympia oyster adults, ctenidia tissue
-
-```{r}
-# PCA with points color coded by tissue and pco2 factors 
-#ggplotly(
-  plotPCA(vsd.adult[degs.adult.pops,], intgroup=c("population")) + 
-           ggtitle("Adult PCA by population, DEGs only (var-stabilizing transformed)") + geom_point(size=3, aes(text=colnames(vsd.adult))) + 
-  theme_minimal()#, tooltip = "text")
-```
-
 ```{r}
 # generate heatmap of population DEGs  
 vsd.adult.df <- as.data.frame(colData(vsd.adult)[,c("population", "pCO2.parent")])
 
 pheatmap(assay(vsd.adult[degs.adult.pops,]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
-         cluster_cols=T, annotation_col=vsd.adult.df[1], scale="row", main = "DEGs among populations")
+         cluster_cols=T, annotation_col=vsd.adult.df[1], scale="row", main = "DEGs among cohorts, Adults",
+         annotation_colors=list(population=c(`Dabob Bay` = "#4daf4a", `Fidalgo Bay` = "#377eb8", `Oyster Bay C1` = "#984ea3")))
 ```
 
 Are there any DEGs common among all 3 population comparisons? 
@@ -675,30 +787,89 @@ Are there any DEGs common among all 3 population comparisons?
 Reduce(intersect, list(rownames(diffex.adult.DBFB),rownames(diffex.adult.DBOB1),rownames(diffex.adult.FBOB1)))
 ```
 
-Enrichment Analysis using all DEGs identified in any pairwise population comparison 
+
+### Examine DEGs among population, but only in those exposed to ambient pCO2 
 
 ```{r}
-# DEGs in ANY pairwise comparison
+key.filtered %>% filter(stage=="adult" & pCO2.parent=="Ambient") %>% group_by(population, pCO2.parent) %>% tally() # 9 per pop 
+keep2 <- (key.filtered %>% filter(stage=="adult" & pCO2.parent=="Ambient"))$sample
+dds.adult.ambient <- dds.adult[,keep2]
+design(dds.adult.ambient) <- formula(~ population)
+dds.adult.ambient.DESeq <- DESeq(dds.adult.ambient)
+```
+## Visualize sample clustering via PCA (after transformation)
+
+```{r}
+vsd.adult.ambient <- varianceStabilizingTransformation(dds.adult.ambient, blind=FALSE)
+
+# PCA with points color coded by population 
+ggplotly(
+  plotPCA(vsd.adult.ambient, intgroup="population") + 
+           ggtitle("PCA by population, ambient only (var-stabilizing transformed)") + 
+    geom_point(size=3, aes(text=colnames(vsd.adult.ambient))) + 
+    theme_minimal()+ stat_ellipse(), tooltip = "text")
+```
+
+```{r}
+print("Comparison: cohort, ambient only")
+summary(res.adult.DBFB.amb <- results(dds.adult.ambient.DESeq, contrast=c("population", "Dabob Bay", "Fidalgo Bay"), alpha=0.05))
+summary(res.adult.DBOB1.amb <- results(dds.adult.ambient.DESeq, contrast=c("population", "Dabob Bay", "Oyster Bay C1"), alpha=0.05))
+summary(res.adult.FBOB1.amb <- results(dds.adult.ambient.DESeq, contrast=c("population", "Fidalgo Bay", "Oyster Bay C1"), alpha=0.05))
+
+paste("No. of genes differentially expressed (padj<0.05) between DB & FB, ambient adults only:",  sum(res.adult.DBFB.amb$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) between DB & OB1, ambient adults only:",  sum(res.adult.DBOB1.amb$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) between FB & OB1, ambient adults only:",  sum(res.adult.FBOB1.amb$padj < 0.05, na.rm=TRUE))
+```
+
+## Save population vs. population DEG lists
+
+```{r}
+diffex.adult.DBFB.amb <- subset(res.adult.DBFB.amb, padj < 0.05)
+diffex.adult.DBOB1.amb <- subset(res.adult.DBOB1.amb, padj < 0.05)
+diffex.adult.FBOB1.amb <- subset(res.adult.FBOB1.amb, padj < 0.05)
+
+# save all R objects to file for integration 
+save(diffex.adult.DBFB.amb, file="../results/diffex.adult.DBFB.amb")
+save(diffex.adult.DBOB1.amb, file="../results/diffex.adult.DBOB1.amb")
+save(diffex.adult.FBOB1.amb, file="../results/diffex.adult.FBOB1.amb")
+
+# merge and select unique genes for PCA 
+degs.adult.pops.amb <- c(rownames(diffex.adult.DBFB.amb), 
+  rownames(diffex.adult.DBOB1.amb),
+  rownames(diffex.adult.FBOB1.amb)) %>% unique()
+save(degs.adult.pops.amb, file="../results/degs.adult.pops.amb")
+```
+
+```{r}
+# generate heatmap of population DEGs  
+vsd.adult.ambient.df <- as.data.frame(colData(vsd.adult.ambient)[,c("population", "pCO2.parent")])
+
+pheatmap(assay(vsd.adult.ambient[degs.adult.pops.amb,]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
+         cluster_cols=T, annotation_col=vsd.adult.ambient.df[1], scale="row", main = "DEGs among cohorts, Adults (ambient pCO2 only)",
+         annotation_colors=list(population=c(`Dabob Bay` = "#4daf4a", `Fidalgo Bay` = "#377eb8", `Oyster Bay C1` = "#984ea3")))
+```
+Enrichment Analysis using DEGs identified in  pairwise population comparisons (ambient pCO2 only)
+
+```{r}
+# DEGs between DB & FB
 filter(Olurida_gene_uniprot, 
-       Name %in% c(rownames(diffex.adult.DBFB),rownames(diffex.adult.DBOB1),rownames(diffex.adult.FBOB1) %>% unique())) %>% 
-  select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+       Name %in% rownames(diffex.adult.DBFB.amb)) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# DEGs between DB & OB1
+filter(Olurida_gene_uniprot, 
+       Name %in% rownames(diffex.adult.DBOB1.amb)) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# DEGs between FB & OB1
+filter(Olurida_gene_uniprot, 
+       Name %in% rownames(diffex.adult.FBOB1.amb)) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 
 # All genes for background
 filter(Olurida_gene_uniprot, 
-       Name %in% c(rownames(res.adult.DBFB),rownames(res.adult.DBOB1),rownames(res.adult.FBOB1) %>% unique())) %>% 
-  select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
-```
-
-Read in GO terms for Revigo
-
-```{r}
-read_delim(file="../results/Adult_FB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
-  mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
-  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
-
-read_delim(file="../results/Adult_DB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
-  mutate(GO = str_extract(Term, "GO(.*?)~")) %>% 
-  mutate(GO = gsub("~", "", GO)) %>% select(GO, PValue) %>% na.omit() %>% write_clip()
+       Name %in% c(rownames(res.adult.DBFB.amb),rownames(res.adult.DBOB1.amb),rownames(res.adult.FBOB1.amb) %>% unique())) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 ```
 
 # RESULTS SYNOPSIS FOR PAPER - ADULTS 
@@ -725,6 +896,536 @@ paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Fidal
 paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Dabob Bay adult ctenidia:",  sum(res.adult.DB$padj < 0.05, na.rm=TRUE))
 paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Oyster Bay Cohort1 adult ctenidia:",  sum(res.adult.OB1$padj < 0.05, na.rm=TRUE))
 
+#check out how many are more abundant and less abundant in high pCO2, and % of all genes that are DEGs  
+summary(res.adult.pco2) 
+summary(res.adult.FB)
+summary(res.adult.DB)
+
+#Enriched Biological Processes 
+EnrBP.adult.pCO2.allpops #In response to pCO2 treatment, all-populations combined, adults 
+EnrBP.adult.pCO2.FB #In response to pCO2 treatment, Fidalgo Bay, adults 
+EnrBP.adult.pCO2.DB #In response to pCO2 treatment, Dabob Bay combined, adults
+
+# Are any GO terms common amon all pops, FB and DB? 
+Reduce(intersect, list(EnrBP.adult.pCO2.allpops$go,EnrBP.adult.pCO2.FB$go, EnrBP.adult.pCO2.DB$go)) #none 
+```
+
+# Bubble plots for paper 
+
+Need dataframe with these columns: 
+- (x) group= c(all.pops, FB, DB, OB)  
+- (y) Term= enriched GO term 
+- (alpha) p.value.adjusted = enrichment analysis FDR adjusted p-values  
+- (color) high.transcripts = c(Greater, Fewer), aka the number of transcripts in high pCO2 compaerd to ambient 
+- (facet_grid) GO.category (biological processes vs. molecular function)
+- (labeller) GOterm_names 
+
+```{r}
+# left_join(GOslim, by=c("go"="GO_ID"))
+
+EnrBP.adult.pCO2.allpops <- read_delim(file="../results/Adult_allpops_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(group="All Cohorts", GO.category="Biological Processes")
+
+EnrMF.adult.pCO2.allpops <- read_delim(file="../results/Adult_allpops_DEGs_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(group="All Cohorts", GO.category="Molecular Function")
+
+EnrBP.adult.pCO2.FB <- read_delim(file="../results/Adult_FB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(group="Fidalgo Bay", GO.category="Biological Processes")
+
+EnrMF.adult.pCO2.FB <- read_delim(file="../results/Adult_FB_DEGs_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(group="Fidalgo Bay", GO.category="Molecular Function")
+
+EnrBP.adult.pCO2.DB <- read_delim(file="../results/Adult_DB_DEGs_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(group="Dabob Bay", GO.category="Biological Processes")
+
+EnrMF.adult.pCO2.DB <- read_delim(file="../results/Adult_DB_DEGs_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(group="Dabob Bay", GO.category="Molecular Function")
+
+all.go.enriched <- rbind(
+  EnrBP.adult.pCO2.allpops,
+  EnrMF.adult.pCO2.allpops,
+  EnrBP.adult.pCO2.FB,
+  EnrMF.adult.pCO2.FB,
+  EnrBP.adult.pCO2.DB,
+  EnrMF.adult.pCO2.DB)
+
+# Here I write out the merged enriched GO term dataframe so I can add a column by hand ("Abundance.HighPCO2") which indicates whether that process/function was more or less abundant in the High pCO2 treatment. 
+write.csv(all.go.enriched %>% left_join(GOslim, by=c("go"="GO_ID")), file="../results/Adults.go.enriched.4paper.csv")  
+```
+
+# For each GO term, assess whether counts were MORE abundant or LESS abundant in the high pCO2 exposed adults 
+
+```{r}
+# Here I plot all the genes that were differentially expressed for each GO term 
+y <- rbind(diffex.adult.FB %>% as.data.frame(), diffex.adult.DB %>% as.data.frame(), 
+           diffex.adult %>% as.data.frame()) %>% 
+  rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID, Note), by = c("gene"="Name")) %>%
+    right_join(all.go.enriched %>% separate_rows(genes), by=c("SPID"="genes"))
+
+n <- 44
+z <- y %>% filter(go==all.go.enriched[n,]$go) %>% filter(group=="All Cohorts")
+print(paste("GO term =", z$go %>% unique()))
+genes_plots <- list()
+for (i in 1:length(z$gene)) {
+print(i)
+a <- plotCounts(dds.adult.DESeq, gene=z$gene[i], 
+             intgroup=c("population", "pCO2.parent"), returnData = TRUE) %>%rownames_to_column("sample")
+b <-  ggplot(a, aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+    geom_point(position=position_jitter(w = 0.1,h = 0)) +
+      geom_text() +
+      theme_bw() +
+      ggtitle(z$gene[i]) +
+      theme(plot.title = element_text(hjust = 0.5))
+genes_plots[[i]] <- b
+}
+genes_plots
+```
+
+# Here plot specific genes 
+
+```{r}
+# First make a dataframe with ALL data annotated 
+all <- res.adult.FB %>% as.data.frame() %>% 
+  rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID, Note), by = c("gene"="Name")) %>%
+    left_join(all.go.enriched %>% separate_rows(genes), by=c("SPID"="genes"))
+
+
+g <- c("Q96T88")
+z <- all %>% filter(SPID %in% g) %>% dplyr::select(gene, SPID, Note) %>% unique()
+#z <- all %>% filter(grepl("roton channel", Note)) %>% dplyr::select(gene, SPID, Note) %>% unique()
+genes_plots <- list()
+for (i in 1:nrow(z)) {
+print(i)
+a <- plotCounts(dds.adult.DESeq, gene=z$gene[i], 
+             intgroup=c("population", "pCO2.parent"), returnData = TRUE) %>%rownames_to_column("sample")
+b <-  ggplot(a, aes(x=population:pCO2.parent, y=count, color=population:pCO2.parent, label=sample)) +
+    #geom_point(position=position_jitter(w = 0.1,h = 0)) +
+  geom_boxplot() +
+      geom_jitter() +
+      theme_bw() +
+      ggtitle(z$Note[i]) +
+      theme(plot.title = element_text(hjust = 0.5))
+genes_plots[[i]] <- b
+}
+genes_plots
+ggplotly(genes_plots[[1]])
+```
+
+
+```{r}
+#install.packages("scatterpie")
+#require(scatterpie)
+
+# Plot enriched Biological Processes 
+pdf(file="../results/EnrichedBP-pCO2.pdf", height = 8.75, width = 7)
+read.csv(file="../results/Adults.go.enriched.4paper-edited.csv", header = T)[,-1] %>% 
+  mutate(go=as.factor(go)) %>% filter(GO.category=="Biological Processes") %>%
+  mutate(Abundance.HighPCO2=factor(Abundance.HighPCO2, levels=c("More", "Both", "Less"))) %>%
+  mutate(group=fct_relevel(as.factor(group), "All Cohorts", after = Inf)) %>% 
+  #filter(group!="All Cohorts") %>% 
+  ggplot(aes(y=str_wrap(process.simple),x=group)) + 
+  facet_wrap(~GO.category,scales="free", nrow = 2) +
+  geom_point(aes(alpha=fdr,size=count, col=Abundance.HighPCO2))+  #size=100*perc_total
+  scale_x_discrete(labels=c("Dabob Bay"="Dabob\nBay", "Fidalgo Bay"="Fidalgo\nBay", "Oyster Bay"="Oyster\nBay", "All Cohorts"="All\nCohorts")) +
+  scale_color_manual(name="Transcript abundance\nin High pCO2",na.translate=FALSE,
+                     labels=c("Greater", "Mixed", "Fewer"),values=c("royalblue3", "seagreen", "red"), guide = guide_legend(override.aes = list(size=4)))+
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.3), breaks=c(0.05, 0.25, 0.75, 1), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("No. of genes", range = c(3,10), breaks = c(2, 5, 10), guide = guide_legend(override.aes = list(col="gray50"))) + 
+  theme_cleveland() + 
+  theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
+        legend.position = "right", axis.text.y=element_text(size=8)) +
+  ylab("Enriched Gene Ontology (GO) Term")
+dev.off()
+
+# Plot enriched Molecular Functions
+pdf(file="../results/EnrichedMF-pCO2.pdf", height = 6.25, width = 6.9)
+read.csv(file="../results/Adults.go.enriched.4paper-edited.csv", header = T)[,-1] %>% 
+  mutate(go=as.factor(go)) %>% filter(GO.category=="Molecular Functions") %>%
+  mutate(Abundance.HighPCO2=factor(Abundance.HighPCO2, levels=c("More", "Both", "Less"))) %>%
+  mutate(group=fct_relevel(as.factor(group), "All Cohorts", after = Inf)) %>% 
+  #filter(group!="All Cohorts") %>%
+  ggplot(aes(y=str_wrap(process.simple),x=group))+ 
+  geom_point(aes(alpha=fdr,size=count, col=Abundance.HighPCO2))+
+ facet_wrap(~GO.category,scales="free", nrow = 2) +
+    scale_x_discrete(labels=c("Dabob Bay"="Dabob\nBay", "Fidalgo Bay"="Fidalgo\nBay", "Oyster Bay"="Oyster\nBay", "All Cohorts"="All\nCohorts")) +
+  scale_color_manual(name="Transcript abundance\nin High pCO2", na.translate=FALSE,
+                     labels=c("Greater", "Mixed", "Fewer"),values=c("royalblue3", "seagreen", "red"), guide = guide_legend(override.aes = list(size=4)))+
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.3), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("No. of genes", range = c(3,9), breaks = c(2, 5, 10), guide = guide_legend(override.aes = list(col="gray50"))) + 
+  theme_cleveland() + 
+  theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
+        legend.position = "right", axis.text.y=element_text(size=8)) +
+  ylab("Enriched Gene Ontology (GO) Term")
+dev.off()
+
+
+# playing around - here i plot pie charts showing no. of genes with more (blue) and less (red) transcripts in high pCO2 
+
+read.csv(file="../results/Adults.go.enriched.4paper-edited.csv", header = T)[,-1] %>% 
+  mutate(go=as.factor(go)) %>% #filter(GO.category=="Biological Processes") %>%
+  mutate(Abundance.HighPCO2=factor(Abundance.HighPCO2, levels=c("More", "Both", "Less"))) %>%
+  filter(group!="All Cohorts") %>% 
+  pivot_longer(names_to="up.down", values_to="count.up.down", cols = c("count_up", "count_down")) %>%
+  filter(Abundance.HighPCO2=="Both") %>%
+  ggplot() +
+  geom_bar(aes(x = "", y = count.up.down, fill = up.down, alpha=fdr, group=group),
+           width = 1, stat = "identity", color = "white", position = position_fill()) +
+  coord_polar("y", start = 0)+
+  geom_text(aes(x = "", y = count.up.down, label = count.up.down), position = position_fill(vjust = 0.5), size=2.5) +
+  scale_fill_manual(values = c("red", "royalblue3")) +
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.3), guide = guide_legend(override.aes = list(size=4))) +
+  theme_void() +
+  facet_wrap(~group+str_wrap(process.simple, width = 20), nrow = 2) +
+  theme(text = element_text(size=8))
+```
+# Here I view all DEGs and their associated GO terms 
+
+```{r}
+rbind(diffex.adult.FB %>% as.data.frame(), diffex.adult.DB %>% as.data.frame(), 
+           diffex.adult %>% as.data.frame()) %>% 
+  rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+  left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID, Note, Ontology_term), by = c("gene"="Name")) %>%
+    left_join(all.go.enriched %>% separate_rows(genes), by=c("SPID"="genes")) %>% View()
+```
+
+
+# For each GO term, assess whether counts were MORE abundant or LESS abundant in each cohort! 
+
+```{r}
+EnrBP.adult.DBFB <- read_delim(file="../results/Adult_cohort_DEGs_DBFB_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Fidalgo Bay", GO.category="Biological Processes")
+
+EnrMF.adult.DBFB <- read_delim(file="../results/Adult_cohort_DEGs_DBFB_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Fidalgo Bay", GO.category="Molecular Function")
+
+EnrBP.adult.DBOB1 <- read_delim(file="../results/Adult_cohort_DEGs_DBOB1_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Oyster Bay", GO.category="Biological Processes")
+
+EnrMF.adult.DBOB1 <- read_delim(file="../results/Adult_cohort_DEGs_DBOB1_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Oyster Bay", GO.category="Molecular Function")
+
+EnrBP.adult.FBOB1 <- read_delim(file="../results/Adult_cohort_DEGs_FBOB1_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Fidalgo Bay\n~Oyster Bay", GO.category="Biological Processes")
+
+EnrMF.adult.FBOB1 <- read_delim(file="../results/Adult_cohort_DEGs_FBOB1_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Fidalgo Bay\n~Oyster Bay", GO.category="Molecular Function")
+
+all.go.enriched.cohorts.adults <- rbind(
+  EnrBP.adult.DBFB,
+  EnrMF.adult.DBFB,
+  EnrBP.adult.DBOB1,
+  EnrMF.adult.DBOB1,
+  EnrBP.adult.FBOB1,
+  EnrMF.adult.FBOB1) %>% 
+  left_join(GOslim, by=c("go"="GO_ID"))
+
+  
+save(all.go.enriched.cohorts.adults, file = "../results/all.go.enriched.cohorts.adults")
+
+# Plot enriched Biological Processes 
+all.go.enriched.cohorts.adults %>% 
+  mutate(go=as.factor(go)) %>% filter(GO.category=="Biological Processes") %>%
+  ggplot(aes(y=str_wrap(process),x=contrast)) +  # NOTE: could instead use the next line to show GO Term ID's on the y-axis 
+  geom_point(aes(alpha=fdr,size=count))+
+ facet_wrap(~GO.category,scales="free", nrow = 2) +
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.3), breaks = c(.25, .5, .75, 1), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("Gene count", range = c(3,12), breaks = c(2, 5, 10), guide = guide_legend(override.aes = list(col="gray50"))) + 
+  theme_cleveland() + 
+  theme(axis.title.x=element_blank(), axis.text.x = element_text(size=7),
+        legend.position = "right", axis.text.y=element_text(size=8.5), plot.title = element_text(size=10)) +
+  ylab("Enriched Gene Ontology (GO) Term") + ggtitle("Enriched function among cohorts, Adults")
+
+# Plot enriched Molecular Functions
+all.go.enriched.cohorts.adults %>% 
+  mutate(go=as.factor(go)) %>% filter(GO.category=="Molecular Function") %>%
+  ggplot(aes(y=str_wrap(process),x=contrast))+  # NOTE: could instead use the next line to show GO Term ID's on the y-axis 
+  geom_point(aes(alpha=fdr,size=count)) +
+ facet_wrap(~GO.category,scales="free", nrow = 2) +
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.25), breaks = c(.25, .5, .75, 1), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("Gene count", range = c(3,12), breaks = c(2, 5, 10), guide = guide_legend(override.aes = list(col="gray50"))) + 
+  theme_cleveland() + 
+  theme(axis.title.x=element_blank(), axis.text.x = element_text(size=7),
+        legend.position = "right", axis.text.y=element_text(size=8.5), plot.title = element_text(size=10)) +
+  ylab("Enriched Gene Ontology (GO) Term") + ggtitle("Enriched function among cohorts, Adults")
+```
+
+
+# PCA with all genes using princomp and showing broken stick 
+
+```{r}
+
+# PCA using prcomp etc., but NOTE that I pull the covariance matrix from the SNPRelate PCA command  
+pca.adult.princomp.expr <- prcomp(cov(assay(vsd.adult)), scale=F) #scale=F for variance-covariance matrix
+pca.eigenval(pca.adult.princomp.expr) #The Proporation of Variance = %variance 
+pc.percent.adult <- pca.eigenval(pca.adult.princomp.expr)[2,1:4]*100
+screeplot(pca.adult.princomp.expr, bstick=TRUE) #looks like PC 1-5 are significant 
+
+tab.adult.expr <- data.frame(sample.id = colnames(assay(vsd.adult)),
+    EV1.all = pca.adult.princomp.expr$x[,1],    # the first eigenvector
+    EV2.all = pca.adult.princomp.expr$x[,2],    # the second eigenvector
+    stringsAsFactors = FALSE)
+
+shapiro.test(pca.adult.princomp.expr$x) #multivariate normality met 
+
+tab.adult.expr.annot <- left_join(tab.adult.expr, sample.info.adult, by=c("sample.id"="sample")) %>% droplevels()
+group.adult.expr <- as.factor(tab.adult.expr.annot$pop_code)
+
+ggplot(tab.adult.expr.annot, aes(x=EV1.all, y=EV2.all)) + geom_point(aes(shape=population, col=pCO2.parent), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Adult Expression, all genes, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.adult[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.adult[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4575b4","#d73027"), name="Adult pCO2 Exposure") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=pCO2.parent), size=0.3)
+
+ggplot(tab.adult.expr.annot, aes(x=EV1.all, y=EV2.all)) + geom_point(aes(col=population, shape=pCO2.parent), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Adult Expression, all genes, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.adult[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.adult[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3"), name="Cohort") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=population, linetype=pCO2.parent), size=0.5)
+
+save(tab.adult.expr.annot, file="../results/tab.adult.expr.annot")
+
+# GGSCATTER with ellipses and stars 
+ggscatter(tab.adult.expr.annot, x="EV1.all", y="EV2.all",
+          shape="population", color="pCO2.parent", size=3.5, alpha=0.85, 
+           palette = c("#4575b4","#d73027"),
+   ellipse = TRUE, star.plot = TRUE) + 
+  theme_minimal() + ggtitle("Adult Expression, all genes, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.adult[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.adult[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  guides(colour = guide_legend(override.aes = list(size=3.5))) 
+```
+
+
+# PCA with gene set that are DEGs among any pCO2 comparison (all pops, FB, DB, and OB1)
+
+```{r}
+pca.adult.princomp.expr.co2 <-
+  princomp(cov(assay(vsd.adult[unique(c(rownames(diffex.adult),rownames(diffex.adult.FB),rownames(diffex.adult.DB),rownames(diffex.adult.OB1))),])))
+pca.eigenval(pca.adult.princomp.expr.co2) #The Proporation of Variance = %variance 
+pc.percent.adult.pco2 <- pca.eigenval(pca.adult.princomp.expr.co2)[2,1:4]*100
+screeplot(pca.adult.princomp.expr.co2, bstick=TRUE) #looks like PC 1 & 2
+
+tab.adult.expr.co2 <- data.frame(sample.id = colnames(assay(vsd.adult)),
+    EV1.pco2 = pca.adult.princomp.expr.co2$scores[,1],    # the first eigenvector
+    EV2.pco2 = pca.adult.princomp.expr.co2$scores[,2],    # the second eigenvector
+    stringsAsFactors = FALSE)
+
+tab.adult.expr.pco2.annot <- left_join(tab.adult.expr.co2, sample.info.adult, by=c("sample.id"="sample")) %>% droplevels()
+group.adult.pco2.expr <- as.factor(tab.adult.expr.pco2.annot$pop_code)
+
+ggplot(tab.adult.expr.pco2.annot, aes(x=EV1.pco2, y=EV2.pco2)) + geom_point(aes(shape=population, col=pCO2.parent), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Adult Expression PC1xPC2, DEGs in response to pCO2") + 
+  xlab(paste("PC1 (", round(pc.percent.adult.pco2[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.adult.pco2[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4575b4","#d73027"), name="Adult pCO2 Exposure") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=pCO2.parent), size=0.3)
+
+save(tab.adult.expr.pco2.annot, file="../results/tab.adult.expr.pco2.annot")
+```
+
+# PCA with gene set that are DEGs among any pairwise population comparison 
+
+```{r}
+pca.adult.princomp.expr.pop <-
+  princomp(cov(assay(vsd.adult.ambient[degs.adult.pops.amb,])))
+pca.eigenval(pca.adult.princomp.expr.pop) #The Proporation of Variance = %variance 
+pc.percent.adult.pop <- pca.eigenval(pca.adult.princomp.expr.pop)[2,1:4]*100
+screeplot(pca.adult.princomp.expr.pop, bstick=TRUE) #looks like PC 1, 2 are sign.
+
+tab.adult.expr.pop <- data.frame(sample.id = colnames(assay(vsd.adult.ambient)),
+    EV1.coh = pca.adult.princomp.expr.pop$scores[,1],    # the first eigenvector
+    EV2.coh = pca.adult.princomp.expr.pop$scores[,2],    # the second eigenvector
+    stringsAsFactors = FALSE)
+
+tab.adult.expr.pop.annot <- left_join(tab.adult.expr.pop, sample.info.adult, by=c("sample.id"="sample")) %>% droplevels()
+group.adult.pop.expr <- as.factor(tab.adult.expr.pop.annot$pop_code)
+
+ggplot(tab.adult.expr.pop.annot, aes(x=EV1.coh, y=EV2.coh)) + geom_point(aes(shape=pCO2.parent, col=population), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Adult Expression PC1xPC2, DEGs among cohorts") + 
+  xlab(paste("PC1 (", round(pc.percent.adult.pop[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.adult.pop[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3"), name="Cohort") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=population), size=0.3)
+save(tab.adult.expr.pop.annot, file="../results/tab.adult.expr.pop.annot")
+```
+Heatmap of genes involved in oxidation reduction processes 
+
+```{r}
+annotation_colors = list(
+  pCO2.parent = c(Ambient="royalblue3", High="red"),
+  population=c(`Dabob Bay`="#4daf4a", `Fidalgo Bay`="#377eb8", `Oyster Bay C1`="#984ea3"))
+
+# all <- rbind(res.adult.FB %>% as.data.frame()) %>% 
+#   rownames_to_column("gene") %>% dplyr::select(gene, padj) %>% 
+#   left_join(Olurida_gene_uniprot %>% dplyr::select(Name, SPID, Note), by = c("gene"="Name")) %>%
+#     left_join(all.go.enriched %>% separate_rows(genes), by=c("SPID"="genes"))
+
+# heatmap of genes involved in oxidation reduction stuff 
+oxid.adult.counts <- subset(counts(dds.adult.DESeq), rownames(dds.adult.DESeq) %in% 
+                              c(unique((y %>% filter(grepl("oxid|sulfo", process)))$gene), 
+                                                       (y %>% filter(grepl("crystallin", Note)))$gene))
+
+oxid.adult.counts <- oxid.adult.counts[,(key.filtered %>% filter(stage=="adult") %>% arrange(population, pCO2.parent))$sample]
+dds.adult.df.oxid <- dds.adult.df[match(colnames(oxid.adult.counts), rownames(dds.adult.df)),]
+all(colnames(oxid.adult.counts) == rownames(dds.adult.df.oxid)) #double check that samples are still in same order 
+
+pheatmap(log2(oxid.adult.counts+1), cluster_rows=T, cluster_cols = F,
+         scale="row", show_rownames=FALSE, show_colnames = FALSE, na.rm=TRUE, 
+         main = "Adult DEGs involved in detoxification, redox", 
+         annotation_col=dds.adult.df[1:2], annotation_colors = annotation_colors, fontsize = 8.5)
+
+
+# heatmap of genes involved in lipid transport
+lipid.adult.counts <- subset(counts(dds.adult.DESeq), rownames(dds.adult.DESeq) %in% 
+                                 c(unique(y %>% filter(grepl("Abc|ABC|phospholipase|von Willebrand", Note)))$gene,
+                                unique(y %>% filter(grepl("phospholipid translocation|lipid transport|fatty|lipid", process)))$gene))
+# %>% filter(!grepl("Vitellogenin|Cytosolic phospholipase A2|HELZ2: Helicase with zinc"))
+
+lipid.adult.counts <- lipid.adult.counts[,(key.filtered %>% filter(stage=="adult") %>% arrange(population, pCO2.parent))$sample]
+dds.adult.df.lipid <- dds.adult.df[match(colnames(lipid.adult.counts), rownames(dds.adult.df)),]
+all(colnames(lipid.adult.counts) == rownames(dds.adult.df.lipid)) #double check that samples are still in same order 
+
+
+pheatmap(log2(lipid.adult.counts[!rownames(lipid.adult.counts) %in% c("OLUR_00007563", "OLUR_00001118", "OLUR_00013228"),]+1), 
+         cluster_rows=T, cluster_cols = F,
+         scale="row", show_rownames=T, show_colnames = FALSE, na.rm=TRUE, 
+         main = "Adult DEGs involved in lipid metabolism and transport", 
+         annotation_col=dds.adult.df[1:2], annotation_colors = annotation_colors, fontsize = 8.5)
+
+
+# boxplots of stress-related genes 
+
+g <- (all %>% filter(grepl("heat shock|Heat shock|Universal stress|Stress response|Stress-activated|Stress-induced", Note)))$gene
+z <- all %>% filter(gene %in% g) %>% dplyr::select(gene, SPID, Note) %>% unique()
+z <- all %>% filter(gene %in% rownames(lipid.adult.counts)) %>% dplyr::select(gene, SPID, Note) %>% unique()
+genes_plots <- list()
+for (i in 1:nrow(z)) {
+print(i)
+a <- plotCounts(dds.adult.DESeq, gene=z$gene[i], 
+             intgroup=c("population", "pCO2.parent"), returnData = TRUE) %>% rownames_to_column("sample")
+b <-  ggplot(a, aes(x=population:pCO2.parent, y=count, color=population:pCO2.parent, label=sample)) +
+    #geom_point(position=position_jitter(w = 0.1,h = 0)) +
+  geom_boxplot() +
+      geom_jitter() +
+      theme_bw() +
+      ggtitle(z$Note[i]) +
+      theme(plot.title = element_text(hjust = 0.5))
+genes_plots[[i]] <- b
+}
+
+genes_plots
+#ggplotly(genes_plots[[1]])
+
+
+# heatmap of genes involved in channels
+channel.adult.counts <- subset(counts(dds.adult.DESeq), rownames(dds.adult.DESeq) %in% 
+                                 c(unique(all %>% filter(grepl("hydrogen channel|proton", Note)))$gene))
+
+channel.adult.counts <- channel.adult.counts[,(key.filtered %>% filter(stage=="adult") %>% arrange(population, pCO2.parent))$sample]
+dds.adult.df.channel <- dds.adult.df[match(colnames(channel.adult.counts), rownames(dds.adult.df)),]
+all(colnames(channel.adult.counts) == rownames(dds.adult.df.channel)) #double check that samples are still in same order 
+
+
+pheatmap(log2(channel.adult.counts+1), 
+         cluster_rows=T, cluster_cols = F,
+         scale="row", show_rownames=T, show_colnames = FALSE, na.rm=TRUE, 
+         main = "Adult genes (not DEGs) involved in proton channels", 
+         annotation_col=dds.adult.df[1:2], annotation_colors = annotation_colors, fontsize = 8.5)
 
 ```
 
+# Plot stress-response genes 
+
+```{r}
+g <- (y %>% filter(grepl("Q99933|O43301|P74897|Q9D4G2", SPID)))$gene
+z <- all %>% filter(gene %in% g) %>% dplyr::select(gene, SPID, Note) %>% unique() %>%
+  mutate(protein=c("BAG1 (molecular chaperone)", "HSPA12A", "Universal stress protein in\nQAH/OAS sulfhydrylase 3'region", "Hsf2bp"))
+
+count_plots.adult = list()
+for (i in 1:nrow(z)) {
+a <-  plotCounts(dds.adult.DESeq, gene=z$gene[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+b <- ggplot(a %>% rownames_to_column("sample"),
+       aes(x=population:pCO2.parent, y=count, color=population, shape=pCO2.parent, label=sample)) +
+  geom_point(size=3, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text(size=3) +
+    theme_bw() +
+    ggtitle(z$protein[i]) +
+    theme(plot.title = element_text(hjust = 0.5, size = 10), axis.text.x = element_blank(),
+          axis.text.y = element_text(size=6),
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "none") +
+  scale_color_manual(values = c("#4daf4a","#377eb8","#984ea3"), name="Cohort", guide = guide_legend(override.aes = list(size=4))) +
+  scale_shape(name="pCO2 exposure", guide = guide_legend(override.aes = list(size=4))) 
+count_plots.adult[[i]] <- b
+}
+plot_grid(plotlist=count_plots.adult) #plot them in a grid 
+```
+
+# Plot glutathione genes 
+
+```{r}
+g <- (all %>% filter(grepl("lutathione", Note)))$gene
+z <- all %>% filter(gene %in% g) %>% dplyr::select(gene, SPID, Note) %>% unique() 
+
+count_plots.adult = list()
+for (i in 1:nrow(z)) {
+a <-  plotCounts(dds.adult.DESeq, gene=z$gene[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+b <- ggplot(a %>% rownames_to_column("sample"),
+       aes(x=population:pCO2.parent, y=count, color=population, shape=pCO2.parent, label=sample)) +
+  geom_point(size=3, position=position_jitter(w = 0.2,h = 0)) +
+    #geom_text(size=3) +
+    theme_bw() +
+    ggtitle(z$SPID[i]) +
+    theme(plot.title = element_text(hjust = 0.5, size = 10), axis.text.x = element_blank(),
+          axis.text.y = element_text(size=6),
+          axis.title = element_blank(), axis.ticks.x = element_blank(), legend.position = "none") +
+  scale_color_manual(values = c("#4daf4a","#377eb8","#984ea3"), name="Cohort", guide = guide_legend(override.aes = list(size=4))) +
+  scale_shape(name="pCO2 exposure", guide = guide_legend(override.aes = list(size=4))) 
+count_plots.adult[[i]] <- b
+}
+plot_grid(plotlist=count_plots.adult) #plot them in a grid 
+```

@@ -5,13 +5,6 @@ date: "5/22/2020"
 output: html_document
 ---
 
-```{r}
-getwd()
-install.packages("PopGenome")
-library(PopGenome)
-?readData
-```
-
 ### Load libraries and source scripts 
 
 ```{r, message=FALSE, warning=FALSE, results=FALSE}
@@ -31,17 +24,18 @@ lapply(list.of.packages, FUN = function(X) {
 load(file = "../results/gene-counts-filtered") #object = counts.filtered
 load(file="../raw-data/key.filtered")
 
-larval.samples <- key.filtered %>% filter(stage=="larvae") %>% select(sample) %>% unlist() %>% as.vector() %>% as.character()
+larval.samples <- key.filtered %>% filter(stage=="larvae") %>% dplyr::select(sample) %>% unlist() %>% as.vector() %>% as.character()
 
 ggplotly(
 ggplot(data = counts.filtered %>%
-         select(larval.samples) %>%
+         dplyr::select(larval.samples) %>%
          colSums() %>% data.frame() %>%
                   dplyr::rename(count.total = 1) %>% 
                   rownames_to_column(var="sample"))  +
            geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total count by sample, larvae (pooled, whole-body)") + 
              theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()))
 ```
+
 ### Load transformed counts object
 
 ```{r}
@@ -58,17 +52,31 @@ counts.t.larvae[,1:3] #take a peak at the resulting dataframe
 ### Pre-filtering - remove rows (genes) with less than a total of 10 reads (across all samples) (why?)
 
 ```{r}
-keep <- colSums(counts.t.larvae) >= 10
+keep <- colSums(counts.t.larvae) >= 100
 counts.ts.larvae <- counts.t.larvae[,keep]
 print(paste("# genes remaining after pre-filtering:", ncol(counts.ts.larvae)))
 print(paste("# of genes dropped:", ncol(counts.t.larvae) - ncol(counts.ts.larvae), sep=" "))
 ```
 
+### Remove other samples? 
+
+```{r}
+# For instance, if I wanted to remove all Oyster Bay C2 larvae 
+# keep2 <- (key.filtered %>% filter(stage=="larvae" & population!="Oyster Bay C2"))$sample
+# counts.ts.larvae <- counts.ts.larvae[keep2,]
+
+# Or if I want to only compare 6A vs 10H
+# key.filtered %>% filter(stage=="larvae" & (temp_pco2=="10_High" | temp_pco2=="6_Ambient")) %>% group_by(temp_pco2) %>% tally()
+# keep2 <- (key.filtered %>% filter(stage=="larvae" & (temp_pco2=="10_High" | temp_pco2=="6_Ambient")))$sample
+# counts.ts.larvae <- counts.ts.larvae[keep2,]
+```
+
+
 ### How many genes were identified in each sample?
 
 ```{r}
 ggplotly(
-ggplot(data = data.frame(rowSums(counts.t.larvae != 0)) %>% 
+ggplot(data = data.frame(rowSums(counts.ts.larvae != 0)) %>% 
                   dplyr::rename(count.total = 1) %>% 
                   rownames_to_column(var="sample")) +
            geom_bar(aes(x=sample, y=count.total), stat = "identity") + ggtitle("Total # genes by sample after pre-filtering, larvae") + 
@@ -143,8 +151,7 @@ all(rownames(counts.tsk.larvae) == counts.tsk.larvae %>% dplyr::select(starts_wi
 #key.DESeq <- counts.tsk.larvae[-which(rownames(counts.tsk.larvae) %in% "571_larvae"),c("population", "pCO2.parent")] 
 
 dds.larvae <- DESeqDataSetFromMatrix(countData = counts.tsk.larvae[,grepl("OLUR", colnames(counts.tsk.larvae))] %>% t(),
-                              colData = counts.tsk.larvae[,c("population", "temp.parent", "pCO2.parent", "week.collected", "prep.batch", "larval.day.collected")],
-                              design = ~ population + temp.parent + pCO2.parent)
+                              colData = counts.tsk.larvae[,c("population", "temp.parent", "pCO2.parent", "week.collected", "prep.batch", "larval.day.collected")],  design = ~ population + temp.parent + pCO2.parent)
 ```
 
 # Visualize data via PCAs and heat maps 
@@ -166,44 +173,44 @@ NOTE: Hover over points to see the sample numbers
 ggplotly(
 plotPCA(vsd.larvae, intgroup="population") + 
            ggtitle("PCA by population (var-stabilizing transformed)") + 
-  geom_point(aes(size=vsd.larvae$larval.day.collected, text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
+  geom_point(aes(size=vsd.larvae$larval.day.collected, text=colnames(vsd.larvae))) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
 # PCA with points color coded by parental temperature treatment
 ggplotly(
 plotPCA(vsd.larvae, intgroup="temp.parent") + 
            ggtitle("PCA by population (var-stabilizing transformed)") + 
-  geom_point(size=3) + theme_minimal(), tooltip = "text")
+  geom_point(size=3) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
 # PCA with points color coded by parental pCO2 exposure 
 ggplotly(
 plotPCA(vsd.larvae, intgroup="pCO2.parent") + 
            ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + 
-  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
+  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
 # PCA with points color coded by temperature & parental pCO2 exposure 
 ggplotly(
 plotPCA(vsd.larvae, intgroup=c("temp.parent", "pCO2.parent")) + 
            ggtitle("PCA by parental pCO2 exposure (var-stabilizing transformed)") + 
-  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
+  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
 # PCA with points color coded by population, and pco2 factors 
 ggplotly(
 plotPCA(vsd.larvae, intgroup=c("population","pCO2.parent")) + 
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + 
-  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
+  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
 # PCA with points color coded by population, temperature, and pco2 factors 
 ggplotly(
 plotPCA(vsd.larvae, intgroup=c("population","temp.parent", "pCO2.parent")) + 
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + 
-  geom_point(aes(size=vsd.larvae$larval.day.collected, text=colnames(vsd.larvae))) + theme_minimal(), tooltip = "text")
+  geom_point(aes(size=vsd.larvae$larval.day.collected, text=colnames(vsd.larvae))) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
 # PCA with same 2 colors for all populations (for prelim. results presentation)
 ggplotly(
   plotPCA(vsd.larvae, intgroup=c("population","pCO2.parent")) + 
            ggtitle("PCA by population + parental pCO2 (var-stabilizing transformed)") + 
     geom_point(size=4, aes(text=colnames(vsd.larvae))) + 
-    scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4")), tooltip = "text")
+    scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4","#F8766D","#00BFC4")) + stat_ellipse(), tooltip = "text")
 
 # Check out other random effects 
 
@@ -211,14 +218,16 @@ ggplotly(
 ggplotly(
 plotPCA(vsd.larvae, intgroup=c("prep.batch")) + 
            ggtitle("PCA by population (var-stabilizing transformed)") + 
-  geom_point(size=3) + theme_minimal(), tooltip = "text")
+  geom_point(size=3) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
 # PCA with points color coded by time period colelcted (1, 2)
 ggplotly(
 plotPCA(vsd.larvae, intgroup=c("week.collected")) + 
            ggtitle("PCA by population (var-stabilizing transformed)") + 
-  geom_point(size=3) + theme_minimal(), tooltip = "text")
+  geom_point(size=3) + theme_minimal() + stat_ellipse(), tooltip = "text")
 
+PCA.data.larvae <- plotPCA(vsd.larvae, intgroup=c("population","pCO2.parent"), returnData=TRUE)
+save(PCA.data.larvae, file="../results/PCA.data.larvae")
 ```
 
 ### Generate heat maps before & after transformation  
@@ -244,15 +253,15 @@ A heatmap of this distance matrix gives us an overview over similarities and dis
 ```{r}
 colors <- colorRampPalette(rev(brewer.pal(9, "Blues")) )(255)
 
-sampleDists <- dist(t(assay(vsd.larvae)))
-sampleDistMatrix <- as.matrix(sampleDists)
+sampleDists.larvae <- dist(t(assay(vsd.larvae)))
+sampleDistMatrix.larvae <- as.matrix(sampleDists.larvae)
 
-# Here we show pCO2.parent + population 
-rownames(sampleDistMatrix) <- paste(vsd.larvae$population, vsd.larvae$pCO2.parent, sep="-") #set row names 
-colnames(sampleDistMatrix) <- NULL
-pheatmap(sampleDistMatrix,
-         clustering_distance_rows=sampleDists,
-         clustering_distance_cols=sampleDists,
+# Here we show pCO2.parent + population
+rownames(sampleDistMatrix.larvae) <- paste(vsd.larvae$population, vsd.larvae$pCO2.parent, sep="-") #set row names
+colnames(sampleDistMatrix.larvae) <- NULL
+pheatmap(sampleDistMatrix.larvae,
+         clustering_distance_rows=sampleDists.larvae,
+         clustering_distance_cols=sampleDists.larvae,
          col=rev(colors), fontsize = 6)
 ```
 
@@ -267,15 +276,16 @@ design(dds.larvae)
 
 ```{r}
 dds.larvae.DESeq <- DESeq(dds.larvae) 
-``
+```
+```{r}
 # Larvae: Differential Gene Expression Analysis by _week collected_ (all populations combined)
-
-``{r}
-print("Comparison: period 1 vs. period 2")
-summary(results(dds.larvae.DESeq, contrast=c("week.collected", "1", "2"), alpha=0.05))
+# print("Comparison: period 1 vs. period 2")
+# summary(results(dds.larvae.DESeq, contrast=c("week.collected", "1", "2"), alpha=0.05))
 ```
 
-# Larvae: Differential Gene Expression Analysis by _parental pCO2 exposure_ (all populations combined)
+# Compare expression among parental pCO2, temperature, and population as sole factors 
+
+## Larvae: Differential Gene Expression Analysis by _parental pCO2 exposure_ (all populations combined)
 
 ```{r}
 print("Comparison: parental pCO2 - All populations")
@@ -284,7 +294,7 @@ paste("No. of genes differentially expressed (padj<0.05) by pCO2, larvae, compar
 # nope
 ```
 
-# Larvae: Differential Gene Expression Analysis by _parental temperature exposure_ (all populations combined)
+## Larvae: Differential Gene Expression Analysis by _parental temperature exposure_ (all populations combined)
 
 ```{r}
 levels(dds.larvae.DESeq$temp.parent)
@@ -294,7 +304,7 @@ paste("No. of genes differentially expressed (padj<0.05) by parent temperature, 
 # nope
 ```
 
-# Larvae: Differential Gene Expression Analysis by _population_ (all parental pCO2 exposure, combined)
+## Larvae: Differential Gene Expression Analysis by _population_ (all parental pCO2 exposure, combined)
 
 ```{r}
 # Here are all the possible contrasts I can make 
@@ -365,7 +375,7 @@ This PCA represents the physiological differences among populations/cohorts of O
 #ggplotly(
   plotPCA(vsd.larvae[degs.larvae.pops,], intgroup=c("population")) + 
            ggtitle("Larval PCA by population, DEGs (var-stabilizing transformed)") + 
-  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal()#, tooltip = "text")
+  geom_point(size=3, aes(text=colnames(vsd.larvae))) + theme_minimal() + stat_ellipse()#, tooltip = "text")
 ```
 
 ```{r}
@@ -373,7 +383,16 @@ This PCA represents the physiological differences among populations/cohorts of O
 vsd.larvae.df <- as.data.frame(colData(vsd.larvae)[,c("population", "pCO2.parent")])
 
 pheatmap(assay(vsd.larvae[degs.larvae.pops,]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
-         cluster_cols=T, annotation_col=vsd.larvae.df[1], scale="row", main = "DEGs among populations")
+         cluster_cols=T, annotation_col=vsd.larvae.df[1], scale="row", main = "DEGs among Cohort, Larval Offspring",
+         annotation_colors=list(population=c(`Dabob Bay` = "#4daf4a", `Fidalgo Bay` = "#377eb8", `Oyster Bay C1` = "#984ea3", `Oyster Bay C2` = "#e41a1c")))
+
+
+# To not include OB2, use this instead: 
+pheatmap(assay(vsd.larvae[degs.larvae.pops,rownames(vsd.larvae.df %>% filter(population!="Oyster Bay C2"))]), cluster_rows=T, show_rownames=FALSE, show_colnames=FALSE,
+         cluster_cols=T, annotation_col=vsd.larvae.df[1], scale="row", main = "DEGs among Cohort, Larval Offspring",
+         annotation_colors=list(population=c(`Dabob Bay` = "#4daf4a", `Fidalgo Bay` = "#377eb8", `Oyster Bay C1` = "#984ea3")))
+
+#c("#4daf4a","#377eb8","#984ea3","#e41a1c")[vsd.larvae.df$population]
 ```
 
 # Larvae: Differential Gene Expression Analysis by _parental temperature & pCO2 exposure_ (all populations combined)
@@ -431,36 +450,31 @@ summary(res.larvae.OB2 <- results(dds.larvae.DESeq, contrast=c("group", "Oyster 
 ## Count # of genes diff expressed  (p-value <0.05) in each comparison 
 
 ```{r}
-paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Fidalgo Bay larvae:",  sum(res.larvae.FB$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Fidalgo Bay larvae:",  sum(res.larvae.FB$padj < 0.05, na.rm=TRUE)) 
 paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Dabob Bay larvae:",  sum(res.larvae.DB$padj < 0.05, na.rm=TRUE))
 paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Oyster Bay Cohort1 larvae:",  sum(res.larvae.OB1$padj < 0.05, na.rm=TRUE))
 paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, Oyster Bay Cohort2 larvae:",  sum(res.larvae.OB2$padj < 0.05, na.rm=TRUE))
 ```
 
-## Extract stats for significantly different genes expressed in FB & DB cohort  
+## Extract stats for significantly different genes expressed in FB 
 
 ```{r}
 diffex.larvae.FB <- subset(res.larvae.FB, padj < 0.05)
-#diffex.larvae.DB <- subset(res.larvae.DB, padj < 0.05)
 ```
 
-## Extract counts for differentially expressed genes for FB & DB cohort  
+## Extract counts for differentially expressed genes for FB
 
 ```{r}
 diffex.larvae.FB.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.FB)) 
 diffex.larvae.FB.counts <- diffex.larvae.FB.counts[,subset(key.filtered, stage=="larvae" & population=="Fidalgo Bay")$sample]
 ```
 
-## Plot gene counts for DEGs  
-
-It can also be useful to examine the counts of reads for a single gene across the groups. A simple function for making this plot is **`plotCounts`, which normalizes counts by sequencing depth and adds a pseudocount of 1/2 to allow for log scale plotting.** The counts are grouped by the variables in intgroup, where more than one variable can be specified. Here we specify the gene which had the smallest p value from the results table created above. You can select the gene to plot by rowname or by numeric index.
-
 ### Here we plot the genes differentially expressed in FB between parental pCO2 exposure  
 
 ```{r}
 # Is the gene annotated? Nope. 
 Olurida_gene_uniprot %>% filter(Name %in% rownames(diffex.larvae.FB)) %>%
-  select(contig, start, end, Name, Note, SPID)
+  dplyr::select(contig, start, end, Name, Note, SPID)
 
 a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.FB), intgroup=c("population", "pCO2.parent"), returnData = TRUE)
 
@@ -472,6 +486,7 @@ ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
     ggtitle(rownames(diffex.larvae.FB)) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
+
 ```{r}
 # Add a factor that defines interaction between population, temperature, and pco2 
 dds.larvae.DESeq$pop.temp.pCO2 <- factor(paste0(dds.larvae.DESeq$population, dds.larvae.DESeq$temp.parent, dds.larvae.DESeq$pCO2.parent))
@@ -557,7 +572,7 @@ Olurida_gene_uniprot %>% filter(Name %in%
   rownames(diffex.larvae.OB16.counts),
   rownames(diffex.larvae.OB110.counts),
   rownames(diffex.larvae.OB26a10h.counts))) %>% 
-  select(contig, start, end, Name, Note, SPID)
+  dplyr::select(contig, start, end, Name, Note, SPID)
 
 # FB 6-High vs. 10-Ambient
 for (i in 1:nrow(diffex.larvae.FB6h10a.counts)) {
@@ -638,79 +653,23 @@ print(ggplot(subset(a, pop.temp.pCO2=="Oyster Bay C26Ambient" | pop.temp.pCO2=="
 }
 ```
 
+# Remove:  OLUR_00010657, OLUR_00001136, OLUR_00023544 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Add Time Factor - Larvae: Differential Gene Expression Analysis by _Parental pCO2, within each population & time period_
+# Are any of these genes annotated?
 
 ```{r}
-# Add a factor that defines interaction group 
-dds.larvae.DESeq$group2 <- factor(paste0(dds.larvae.DESeq$population, dds.larvae.DESeq$pCO2.parent, dds.larvae.DESeq$week.collected))
-design(dds.larvae.DESeq) <- ~ group2 
-dds.larvae.DESeq <- DESeq(dds.larvae.DESeq)
-```
+diffex.larvae.inter.names <- c(rownames(diffex.larvae.FB6h10a),
+rownames(diffex.larvae.DB6a10h),
+rownames(diffex.larvae.DB6h10a),
+rownames(diffex.larvae.OB16),
+rownames(diffex.larvae.OB110),
+rownames(diffex.larvae.OB26a10h))
 
-## Extract differential expression results / comparisons among different factors 
 
-Create results objects, but summary of results are also shown
-
-NOTE: can only compare two treatments at a time
-
-```{r}
-# Here are all the possible contrasts I can make 
-levels(dds.larvae.DESeq$group2)
-
-print("Comparison: parental pCO2 - Fidalgo Bay, Period 1 & Period 2")
-summary(res.larvae.1FB <- results(dds.larvae.DESeq, contrast=c("group2", "Fidalgo BayAmbient1", "Fidalgo BayHigh1"), alpha=0.05))
-summary(res.larvae.2FB <- results(dds.larvae.DESeq, contrast=c("group2", "Fidalgo BayHigh2", "Fidalgo BayAmbient2"), alpha=0.05))
-
-print("Comparison: parental pCO2 - Dabob Bay, Period 1 & Period 2")
-summary(res.larvae.1DB <- results(dds.larvae.DESeq, contrast=c("group2", "Dabob BayHigh1", "Dabob BayAmbient1"), alpha=0.05))
-summary(res.larvae.2DB <- results(dds.larvae.DESeq, contrast=c("group2", "Dabob BayHigh2", "Dabob BayAmbient2"), alpha=0.05))
-
-print("Comparison: parental pCO2 - Oyster Bay Cohort 1, Period 1 & Period 2")
-summary(res.larvae.1OB1 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C1High1", "Oyster Bay C1Ambient1"), alpha=0.05))
-summary(res.larvae.2OB1 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C1High2", "Oyster Bay C1Ambient2"), alpha=0.05))
-
-print("Comparison: parental pCO2 - Oyster Bay Cohort 2, Period 1 & Period 2")
-summary(res.larvae.1OB2 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C2High1", "Oyster Bay C2Ambient1"), alpha=0.05))
-summary(res.larvae.2OB2 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C2High2", "Oyster Bay C2Ambient2"), alpha=0.05))
-```
-
-## Extract stats for significantly different genes expressed in FB  
-
-```{r}
-diffex.larvae.2FB <- subset(res.larvae.2FB, padj < 0.05)
-```
-
-## Extract counts for differentially expressed genes for FB & DB cohort  
-
-```{r}
-diffex.larvae.2FB.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.2FB)) 
-diffex.larvae.2FB.counts <- diffex.larvae.2FB.counts[,subset(key.filtered, stage=="larvae" & population=="Fidalgo Bay")$sample]
-```
-
-## Plot gene counts for DEGs  
-
-It can also be useful to examine the counts of reads for a single gene across the groups. A simple function for making this plot is **`plotCounts`, which normalizes counts by sequencing depth and adds a pseudocount of 1/2 to allow for log scale plotting.** The counts are grouped by the variables in intgroup, where more than one variable can be specified. Here we specify the gene which had the smallest p value from the results table created above. You can select the gene to plot by rowname or by numeric index.
-
-### Here we plot the genes differentially expressed in FB between parental pCO2 exposure  
-
-```{r}
-# Is the gene annotated? Nope. 
-Olurida_gene_uniprot %>% filter(Name %in% rownames(diffex.larvae.2FB)) %>%
-  select(contig, start, end, Name, Note, SPID)
+#Is the gene annotated? Nope.
+Olurida_gene_uniprot %>% filter(Name %in% diffex.larvae.inter.names) %>%
+  dplyr::select(contig, start, end, Name, Note, SPID) %>%
+  mutate(Protein=c(NA, NA, "Ras-related and estrogen-regulated growth inhibitor (RERG)", NA, NA, "Cholinesterase (BCHE)", NA, NA, NA, NA))
 
 a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.2FB), intgroup=c("population", "pCO2.parent"), returnData = TRUE)
 
@@ -723,6 +682,75 @@ ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
     theme(plot.title = element_text(hjust = 0.5))
 ```
 
+# Add Time Factor - Larvae: Differential Gene Expression Analysis by _Parental pCO2, within each population & time period_
+
+```{r}
+## Add a factor that defines interaction group 
+# dds.larvae.DESeq$group2 <- factor(paste0(dds.larvae.DESeq$population, dds.larvae.DESeq$pCO2.parent, dds.larvae.DESeq$week.collected))
+# design(dds.larvae.DESeq) <- ~ group2 
+# dds.larvae.DESeq <- DESeq(dds.larvae.DESeq)
+```
+
+## Extract differential expression results / comparisons among different factors 
+
+Create results objects, but summary of results are also shown
+
+NOTE: can only compare two treatments at a time
+
+```{r}
+# # Here are all the possible contrasts I can make 
+# levels(dds.larvae.DESeq$group2)
+# 
+# print("Comparison: parental pCO2 - Fidalgo Bay, Period 1 & Period 2")
+# summary(res.larvae.1FB <- results(dds.larvae.DESeq, contrast=c("group2", "Fidalgo BayAmbient1", "Fidalgo BayHigh1"), alpha=0.05))
+# summary(res.larvae.2FB <- results(dds.larvae.DESeq, contrast=c("group2", "Fidalgo BayHigh2", "Fidalgo BayAmbient2"), alpha=0.05))
+# 
+# print("Comparison: parental pCO2 - Dabob Bay, Period 1 & Period 2")
+# summary(res.larvae.1DB <- results(dds.larvae.DESeq, contrast=c("group2", "Dabob BayHigh1", "Dabob BayAmbient1"), alpha=0.05))
+# summary(res.larvae.2DB <- results(dds.larvae.DESeq, contrast=c("group2", "Dabob BayHigh2", "Dabob BayAmbient2"), alpha=0.05))
+# 
+# print("Comparison: parental pCO2 - Oyster Bay Cohort 1, Period 1 & Period 2")
+# summary(res.larvae.1OB1 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C1High1", "Oyster Bay C1Ambient1"), alpha=0.05))
+# summary(res.larvae.2OB1 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C1High2", "Oyster Bay C1Ambient2"), alpha=0.05))
+# 
+# print("Comparison: parental pCO2 - Oyster Bay Cohort 2, Period 1 & Period 2")
+# summary(res.larvae.1OB2 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C2High1", "Oyster Bay C2Ambient1"), alpha=0.05))
+# summary(res.larvae.2OB2 <- results(dds.larvae.DESeq, contrast=c("group2", "Oyster Bay C2High2", "Oyster Bay C2Ambient2"), alpha=0.05))
+```
+
+## Extract stats for significantly different genes expressed in FB  
+
+```{r}
+# diffex.larvae.2FB <- subset(res.larvae.2FB, padj < 0.05)
+```
+
+## Extract counts for differentially expressed genes for FB & DB cohort  
+
+```{r}
+# diffex.larvae.2FB.counts <- subset(counts(dds.larvae.DESeq), rownames(dds.larvae.DESeq) %in% rownames(diffex.larvae.2FB)) 
+# diffex.larvae.2FB.counts <- diffex.larvae.2FB.counts[,subset(key.filtered, stage=="larvae" & population=="Fidalgo Bay")$sample]
+```
+
+## Plot gene counts for DEGs  
+
+### Here we plot the genes differentially expressed in FB between parental pCO2 exposure  
+
+```{r}
+# Is the gene annotated? Nope. 
+# Olurida_gene_uniprot %>% filter(Name %in% rownames(diffex.larvae.2FB)) %>%
+#   select(contig, start, end, Name, Note, SPID)
+# 
+# a <-  plotCounts(dds.larvae.DESeq, gene=rownames(diffex.larvae.2FB), intgroup=c("population", "pCO2.parent"), returnData = TRUE)
+# 
+# ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
+#        aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
+#   geom_point(size=4, position=position_jitter(w = 0.2,h = 0)) +
+#     #geom_text() +
+#     theme_bw() +
+#     ggtitle(rownames(diffex.larvae.2FB)) +
+#     theme(plot.title = element_text(hjust = 0.5))
+```
+
 
 # Can I compare size to gene expression?
 
@@ -731,269 +759,266 @@ load(file = "../results/larvae.size.mean")
 larvae.size.mean
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-====== 
-
-# BONEYARD - not necessary due to low DEGs 
-
-
-## generate heatmap with differentially expressed genes within FB 
+# Results for paper 
 
 ```{r}
-# dds.larvae.df <- as.data.frame(colData(dds.larvae)[as.data.frame(colData(dds.larvae))$population==
-#                                                                    "Fidalgo Bay", c("population", "pCO2.parent")])
-# 
-# pheatmap(diffex.larvae.FB.counts[,order(colnames(diffex.larvae.FB.counts))], 
-#          cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", main = "FB Gene Counts, all differentially expressed genes among pCO2", annotation_col=dds.larvae.df.FB[ order(row.names(dds.larvae.df.FB)), ][2], color=c("dodgerblue3", "goldenrod1"))
+# Within cohort pairwise comparisons among temperature & pCO2 treatments - DEG comparisons only 
+
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, FB 6H vs. 10A larvae:",  sum(res.larvae.FB6h10a$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, DB 6A vs. 10H larvae:",  sum(res.larvae.DB6a10h$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, DB 6H vs. 10A larvae:",  sum(res.larvae.DB6h10a$padj < 0.05, na.rm=TRUE)) 
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, OB1 6A vs. 6H larvae:",  sum(res.larvae.OB16$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, OB1 10A vs. 10H larvae:",  sum(res.larvae.OB110$padj < 0.05, na.rm=TRUE))
+paste("No. of genes differentially expressed (padj<0.05) by parental pCO2, OB2 6A vs. 10H larvae:",  sum(res.larvae.OB26a10h$padj < 0.05, na.rm=TRUE))
 ```
 
-## generate heatmap with differentially expressed genes within DB 
+# PCA with all genes using princomp and showing broken stick 
 
 ```{r}
-# dds.larvae.df.DB <- as.data.frame(colData(dds.larvae)[as.data.frame(colData(dds.larvae))$population==
-#                                                                    "Dabob Bay", c("population", "pCO2.parent")])
-# 
-# pheatmap(diffex.larvae.DB.counts[,order(colnames(diffex.larvae.DB.counts))], 
-#          cluster_rows=T, show_rownames=FALSE, cluster_columns=T, na.rm=TRUE, scale="row", main = "FB Gene Counts, all differentially expressed genes among pCO2", annotation_col=dds.larvae.df.DB[ order(row.names(dds.larvae.df.DB)), ][2], color=c("dodgerblue3", "goldenrod1"))
-```
 
-## Barplots for lots of DEGs
+# PCA using prcomp etc., but NOTE that I pull the covariance matrix from the SNPRelate PCA command  
+pca.larvae.princomp.expr <- princomp(cov(assay(vsd.larvae))) #scale=F for variance-covariance matrix
+pca.eigenval(pca.larvae.princomp.expr) #The Proporation of Variance = %variance 
+pc.percent.larvae <- pca.eigenval(pca.larvae.princomp.expr)[2,1:4]*100
+screeplot(pca.larvae.princomp.expr, bstick=TRUE) #looks like PC 1 & 2 sign.
+
+tab.larvae.expr <- data.frame(sample.id = colnames(assay(vsd.larvae)),
+    EV1.all = pca.larvae.princomp.expr$scores[,1],    # the first eigenvector
+    EV2.all = pca.larvae.princomp.expr$scores[,2],    # the second eigenvector
+    stringsAsFactors = FALSE)
+
+tab.larvae.expr.annot <- left_join(tab.larvae.expr, sample.info.larvae, by=c("sample.id"="sample")) %>%
+    mutate(population=as.factor(population), pCO2.parent=as.factor(pCO2.parent)) %>% drop_na(pCO2.parent) %>% droplevels()
+#group.larvae.expr <- as.factor(tab.larvae.expr.annot$pop_code)
+
+ggplot(tab.larvae.expr.annot, aes(x=EV1.all, y=EV2.all)) + geom_point(aes(shape=population, col=temp.parent:pCO2.parent), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Larval Expression, all genes, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.larvae[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_shape(name="Cohort") +
+  scale_color_manual(values=c("#4575b4","#92c5de",  "#d73027","#f4a582"), name="Parental temp & pCO2 Exposure") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=temp.parent:pCO2.parent), size=0.3)
+
+ggplot(tab.larvae.expr.annot, aes(x=EV1.all, y=EV2.all)) + geom_point(aes(col=population, shape=pCO2.parent), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Larval Expression, all genes, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.larvae[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c"), name="Cohort") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + 
+  stat_ellipse(aes(color=population), size=0.5)
+
+# Plot PCA with points color coded by genetic PC axis 
+ggplot(tab.larvae.expr.annot %>% left_join(tab.larvae.annot.gen[,c("EV1.gen", "EV2.gen", "sample.id")], by="sample.id"), 
+       aes(x=EV1.all, y=EV2.all)) + geom_point(aes(col=EV2.gen, shape=population), size=3.5, alpha=0.8) + 
+  theme_minimal() + ggtitle("Larval Expression, all genes, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.larvae[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_gradientn(colours = c("#e41a1c","#ff7f00","#377eb8"), name="Genetic PC1") +
+  guides(colour = guide_legend(override.aes = list(size=3.5)))
+
+save(tab.larvae.expr.annot, file="../results/tab.larvae.expr.annot")
+```
+# PCA with gene set that are DEGs among any pCO2 comparison (all pops, FB, DB, and OB1)
 
 ```{r}
-# larvae.FB.p05.names <-rownames(diffex.larvae.FB[order(diffex.larvae.FB$padj),])
-# count_plots = list()
-# #plot the 10 genes with lowest p-values
-# for (i in 1:10) {
-# a <-  plotCounts(dds.larvae.DESeq, gene=larvae.FB.p05.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
-# b <- ggplot(subset(a, population=="Fidalgo Bay") %>% rownames_to_column("sample"),
-#        aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
-#   geom_point(position=position_jitter(w = 0.1,h = 0)) +
-#     geom_text() +
-#     theme_bw() +
-#     ggtitle(larvae.FB.p05.names[i]) +
-#     theme(plot.title = element_text(hjust = 0.5))
-# count_plots[[i]] <- b
-# }
-# count_plots
-```
+pca.larvae.princomp.expr.co2 <-
+  princomp(cov(assay(vsd.larvae[unique(c(
+    rownames(diffex.larvae.DB6a10h),
+    rownames(diffex.larvae.DB6h10a),
+    rownames(diffex.larvae.OB16),
+    rownames(diffex.larvae.OB110),
+    rownames(diffex.larvae.OB26a10h))),])))
+pca.eigenval(pca.larvae.princomp.expr.co2) #The Proporation of Variance = %variance 
+pc.percent.larvae.pco2 <- pca.eigenval(pca.larvae.princomp.expr.co2)[2,1:4]*100
+screeplot(pca.larvae.princomp.expr.co2, bstick=TRUE) #looks like PC 1
 
-### Here we plot the genes differentially expressed in DB between parental pCO2 exposure  
+tab.larvae.expr.co2 <- data.frame(sample.id = colnames(assay(vsd.larvae)),
+    EV1.pco2 = pca.larvae.princomp.expr.co2$scores[,1],    # the first eigenvector
+    EV2.pco2 = pca.larvae.princomp.expr.co2$scores[,2],    # the second eigenvector
+    stringsAsFactors = FALSE)
+
+tab.larvae.expr.pco2.annot <- left_join(tab.larvae.expr.co2, sample.info.larvae, by=c("sample.id"="sample")) %>%
+    mutate(population=as.factor(population), pCO2.parent=as.factor(pCO2.parent)) %>% drop_na(pCO2.parent) %>% droplevels()
+#group.larvae.pco2.expr <- as.factor(tab.larvae.expr.pco2.annot$pop_code)
+
+ggplot(tab.larvae.expr.pco2.annot, aes(x=EV1.pco2, y=EV2.pco2)) + geom_point(aes(shape=population, col=temp.parent:pCO2.parent), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Larval Expression, DEGs among parental Temp. & pCO2, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.larvae[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_shape(name="Cohort") +
+  scale_color_manual(values=c("#4575b4","#92c5de",  "#d73027","#f4a582"), name="Parental temp & pCO2 Exposure") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=temp.parent:pCO2.parent), size=0.3)
+
+# Plot PCA with points color coded by genetic PC axis 
+ggplot(tab.larvae.expr.pco2.annot %>% left_join(tab.larvae.annot.gen[,c("EV1.gen", "EV2.gen", "sample.id")], by="sample.id"), 
+       aes(x=EV1.pco2, y=EV2.pco2)) + geom_point(aes(col=EV2.gen, shape=population), size=3.5, alpha=0.8) + 
+  theme_minimal() + ggtitle("Larval Expression,DEGs among parental Temp. & pCO2, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.larvae[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_gradientn(colours = c("#e41a1c","#377eb8","#ff7f00"), name="Genetic PC1") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) 
+
+save(tab.larvae.expr.pco2.annot, file="../results/tab.larvae.expr.pco2.annot")
+```
+# PCA with gene set that are DEGs among any pairwise population comparison 
 
 ```{r}
-# larvae.DB.p05.names <-rownames(diffex.larvae.DB[order(diffex.larvae.DB$padj),])
-# count_plots = list()
-# #plot the 10 genes with lowest p-values
-# for (i in 1:10) {
-# a <-  plotCounts(dds.larvae.DESeq, gene=larvae.DB.p05.names[i], intgroup=c("population", "pCO2.parent"), returnData = TRUE)
-# b <- ggplot(subset(a, population=="Dabob Bay") %>% rownames_to_column("sample"),
-#        aes(x=pCO2.parent, y=count, color=pCO2.parent, label=sample)) +
-#   geom_point(position=position_jitter(w = 0.1,h = 0)) +
-#     geom_text() +
-#     theme_bw() +
-#     ggtitle(larvae.DB.p05.names[i]) +
-#     theme(plot.title = element_text(hjust = 0.5))
-# count_plots[[i]] <- b
-# }
-# count_plots
+pca.larvae.princomp.expr.pop <-
+  princomp(cov(assay(vsd.larvae[degs.larvae.pops,])))
+pca.eigenval(pca.larvae.princomp.expr.pop) #The Proporation of Variance = %variance 
+pc.percent.larvae.pop <- pca.eigenval(pca.larvae.princomp.expr.pop)[2,1:4]*100
+screeplot(pca.larvae.princomp.expr.pop, bstick=TRUE) #looks like PC 1, 2, & 3 are sign.
+
+tab.larvae.expr.pop <- data.frame(sample.id = colnames(assay(vsd.larvae)),
+    EV1.coh = pca.larvae.princomp.expr.pop$scores[,1],    # the first eigenvector
+    EV2.coh = pca.larvae.princomp.expr.pop$scores[,2],    # the second eigenvector
+    EV3.coh = pca.larvae.princomp.expr.pop$scores[,3],    # the third eigenvector
+    stringsAsFactors = FALSE)
+
+tab.larvae.expr.pop.annot <- left_join(tab.larvae.expr.pop, sample.info.larvae, by=c("sample.id"="sample"))  %>%
+    mutate(population=as.factor(population), pCO2.parent=as.factor(pCO2.parent)) %>% drop_na(pCO2.parent) %>% droplevels()
+group.larvae.pop.expr <- as.factor(tab.larvae.expr.pop.annot$pop_code)
+
+ggplot(tab.larvae.expr.pop.annot, aes(x=EV1.coh, y=EV2.coh)) + geom_point(aes(shape=pCO2.parent, col=population), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Larval Expression PC1xPC2, DEGs among cohorts") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae.pop[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.larvae.pop[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c"), name="Cohort") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=population), size=0.3)
+
+ggplot(tab.larvae.expr.pop.annot, aes(x=EV1.coh, y=EV3.coh)) + geom_point(aes(shape=pCO2.parent, col=population), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Larval Expression PC1xPC3, DEGs among cohorts") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae.pop[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC3 (", round(pc.percent.larvae.pop[3], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c"), name="Cohort") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=population), size=0.3)
+
+ggplot(tab.larvae.expr.pop.annot, aes(x=EV2.coh, y=EV3.coh)) + geom_point(aes(shape=pCO2.parent, col=population), size=3.5, alpha=0.85) + 
+  theme_minimal() + ggtitle("Larval Expression PC2xPC3, DEGs among cohorts") + 
+  xlab(paste("PC2 (", round(pc.percent.larvae.pop[2], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC3 (", round(pc.percent.larvae.pop[3], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c"), name="Cohort") +
+  guides(colour = guide_legend(override.aes = list(size=3.5))) + stat_ellipse(aes(color=population), size=0.3)
+
+
+# Plot PCA with points color coded by genetic PC axis 
+ggplot(tab.larvae.expr.pop.annot %>% left_join(tab.larvae.annot.gen[,c("EV1.gen", "EV2.gen", "sample.id")], by="sample.id"), 
+       aes(x=EV2.coh, y=EV3.coh)) + geom_point(aes(col=EV2.gen, shape=population), size=3.5, alpha=0.8) + 
+  theme_minimal() + ggtitle("Larval Expression,DEGs among parental Temp. & pCO2, PC1xPC2") + 
+  xlab(paste("PC1 (", round(pc.percent.larvae[1], digits = 1), "%)", sep="")) + 
+  ylab(paste("PC2 (", round(pc.percent.larvae[2], digits = 1), "%)", sep="")) + 
+  theme(legend.position = "right") + 
+  scale_color_gradientn(colours = c("red","blue"), name="Genetic PC1") +
+  guides(colour = guide_legend(override.aes = list(size=3.5)))
+
+save(tab.larvae.expr.pop.annot, file="../results/tab.larvae.expr.pop.annot")
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# MORE BONEYARD, OR TBD ANALYSIS DEVELOPED DURING CRAB ANALYSIS / PILOT STUDY 
-
-
-
-# Create master dataframe of all differentially expressed genes across all comparisons 
+# ==============
+# Enrichment Analysis! using DEGs identified in  pairwise population comparisons
 
 ```{r}
-# diffex.all.counts <- 
-#   rbind.data.frame(
-#     diffex.status.counts,
-#     diffex.ColdVSWarm.counts,
-#     diffex.AmbVSWarm.counts,
-#     diffex.ColdVSAmb.counts,
-#     diffex.9vs26.counts,
-#     diffex.9vs12.counts,
-#     diffex.12vs26.counts) %>% 
-#   rownames_to_column("gene") %>%
-#     arrange(gene)
-#   
-# # are there any duplicate genes? no. 
-# diffex.all.counts[duplicated(diffex.all.counts), ]
-# 
-# # Move first column with gene names to row names 
-# diffex.all.counts <- diffex.all.counts %>% 
-#   column_to_rownames("gene")
+# DEGs between DB & FB larvae 
+filter(Olurida_gene_uniprot, 
+       Name %in% rownames(diffex.larvae.DBFB)) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# DEGs between DB & OB1 larvae
+filter(Olurida_gene_uniprot, 
+       Name %in% rownames(diffex.larvae.DBOB1)) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# DEGs between FB & OB1
+filter(Olurida_gene_uniprot, 
+       Name %in% rownames(diffex.larvae.FBOB1)) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
+
+# All genes for background
+filter(Olurida_gene_uniprot, 
+       Name %in% rownames(res.larvae.DBFB)) %>% 
+  dplyr::select(SPID) %>% na.omit() %>% unlist() %>% as.vector() %>% write_clip()
 ```
-
-## Of all differentially expressed genes (all comparisons), which are the most influential of sample ordination in multivariate space? 
-
-## Run PCA on list of differentially expressed genes (across all comparisons) 
-
-NOTE: set scale=false to use a variance-covariance matrix, putting more weight on genes with higher counts. 
-
-_Notes from multivariate class notes_: 
-PCA is sensitive to the scale of measurement of the data. If all the data are not measured on the same scale, using covariance means that the result will be determined mostly by the variable with the largest values, as it will have the highest variance. Using a correlation matrix treats all variables the same (standardized to mean=0 and std. dev.=1). In prcomp(), this means specifying scale=TRUE in the function call.
-
-### Perform PCA 
+# For each GO term, assess whether counts were MORE abundant or LESS abundant in each cohort! 
 
 ```{r}
-#diff.pca<-FactoMineR::PCA(t(diffex.all.counts),graph=F) #note: need to transform count frame for this PCA 
+EnrBP.larvae.DBFB <- read_delim(file="../results/Larvae_cohort_DEGs_DBFB_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Fidalgo Bay", GO.category="Biological Processes")
+
+EnrMF.larvae.DBFB <- read_delim(file="../results/Larvae_cohort_DEGs_DBFB_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Fidalgo Bay", GO.category="Molecular Function")
+
+EnrBP.larvae.DBOB1 <- read_delim(file="../results/Larvae_cohort_DEGs_DBOB1_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Oyster Bay", GO.category="Biological Processes")
+
+EnrMF.larvae.DBOB1 <- read_delim(file="../results/Larvae_cohort_DEGs_DBOB1_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Dabob Bay\n~Oyster Bay", GO.category="Molecular Function")
+
+EnrBP.larvae.FBOB1 <- read_delim(file="../results/Larvae_cohort_DEGs_FBOB1_EnrichedBP.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Fidalgo Bay\n~Oyster Bay", GO.category="Biological Processes")
+
+EnrMF.larvae.FBOB1 <- read_delim(file="../results/Larvae_cohort_DEGs_FBOB1_EnrichedMF.txt", delim = "\t") %>% 
+  separate(into = c("GO", "process"), col=Term, "~") %>% clean_names() %>%
+  dplyr::select(go, process, count, genes, fold_enrichment, p_value, fdr) %>% 
+  mutate(perc_total=count/sum(count)) %>% 
+  mutate(contrast="Fidalgo Bay\n~Oyster Bay", GO.category="Molecular Function")
+
+all.go.enriched.cohorts.larvae <- rbind(
+  EnrBP.larvae.DBFB,
+  EnrMF.larvae.DBFB,
+  EnrBP.larvae.DBOB1,
+  EnrMF.larvae.DBOB1,
+  EnrBP.larvae.FBOB1,
+  EnrMF.larvae.FBOB1) %>% 
+  left_join(GOslim, by=c("go"="GO_ID"))
+save(all.go.enriched.cohorts.larvae, file = "../results/all.go.enriched.cohorts.larvae")
+
+# Plot enriched Biological Processes 
+all.go.enriched.cohorts.larvae %>% 
+  mutate(go=as.factor(go)) %>% filter(GO.category=="Biological Processes") %>%
+  ggplot(aes(y=str_wrap(process),x=contrast)) +  # NOTE: could instead use the next line to show GO Term ID's on the y-axis 
+  geom_point(aes(alpha=fdr,size=count))+
+ facet_wrap(~GO.category,scales="free", nrow = 2) +
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.3), breaks = c(.25, .5, .75, 1), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("Gene count", range = c(3,12), breaks = c(2, 5, 10), guide = guide_legend(override.aes = list(col="gray50"))) + 
+  theme_cleveland() + 
+  theme(axis.title.x=element_blank(), axis.text.x = element_text(size=7),
+        legend.position = "right", axis.text.y=element_text(size=8.5), plot.title = element_text(size=10)) +
+  ylab("Enriched Gene Ontology (GO) Term") + ggtitle("Enriched function among cohorts, Larvae")
+
+# Plot enriched Molecular Functions
+all.go.enriched.cohorts.larvae %>% 
+  mutate(go=as.factor(go)) %>% filter(GO.category=="Molecular Function") %>%
+  ggplot(aes(y=str_wrap(process),x=contrast))+  # NOTE: could instead use the next line to show GO Term ID's on the y-axis 
+  geom_point(aes(alpha=fdr,size=count)) +
+ facet_wrap(~GO.category,scales="free", nrow = 2) +
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.25), breaks = c(.25, .5, .75, 1), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("Gene count", range = c(3,12), breaks = c(2, 5, 10), guide = guide_legend(override.aes = list(col="gray50"))) + 
+  theme_cleveland() + 
+  theme(axis.title.x=element_blank(), axis.text.x = element_text(size=7),
+        legend.position = "right", axis.text.y=element_text(size=8.5), plot.title = element_text(size=10)) +
+  ylab("Enriched Gene Ontology (GO) Term") + ggtitle("Enriched function among cohorts, Larvae")
 ```
 
-### Scree plot shows how much variance is explained by each Principal Component (PC) Axis: 
-
-- PC Axis 1 explains 31.3% of variance  
-- PC Axis 2 explains 10.9% of variance  
-- PC Axis 3 explains 9.3% of variance   
-
-```{r}
-#fviz_screeplot(diff.pca, addlabels = TRUE)
-```
-
-### Look at the relative contributions of each SAMPLE to PC axes 1, 2, and 3
-
-```{r}
-# fviz_contrib(diff.pca, choice = "ind", axes = 1) + ggtitle("Contribution of samples to PC dimension #1")
-# fviz_contrib(diff.pca, choice = "ind", axes = 2) + ggtitle("Contribution of samples to PC dimension #2")
-# fviz_contrib(diff.pca, choice = "ind", axes = 3) + ggtitle("Contribution of samples to PC dimension #3")
-```
-
-# Plot PC scores for axis 1 ~ axis 2, by treatment 
-
-```{r}
-# pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
-# 
-# # PCA plots with samples, color coded by treatments 
-# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC2, color=infection status") 
-# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC2, color=temperature") 
-# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC2, color=day sampled")
-# 
-# # PCA with samples + top 10 genes contributing to PC scores 
-# fviz_pca_biplot(diff.pca, axes = c(1,2), repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
-```
-
-# Plot PC scores for axis 1 ~ axis 3, by treatment 
-
-```{r}
-# pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
-# 
-# # PCA plots with samples, color coded by treatments 
-# fviz_pca_biplot(diff.pca, axes = c(1,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC1 ~ PC3, color=infection status") 
-# fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC1 ~ PC3, color=temperature") 
-# fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC1 ~ PC3, color=day sampled")
-# 
-# # PCA with samples + top 10 genes contributing to PC scores 
-# fviz_pca_biplot(diff.pca, axes = c(1,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
-```
-
-# Plot PC scores for axis 2 ~ axis 3, by treatment 
-
-```{r}
-# pca.key <- key[order(match(key$sample_stage, rownames(diff.pca$ind$coord))), ] #create key with samples ordered by same order as they are in the PCA 
-# 
-# # PCA plots with samples, color coded by treatments 
-# fviz_pca_biplot(diff.pca, axes = c(2,3), repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$infection_status, title = "PC2 ~ PC3, color=infection status") 
-# fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", select.var = list(contrib = 5), col.ind = pca.key$temperature, title = "PC2 ~ PC3, color=temperature") 
-# fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind"), invisible = "var", col.ind = pca.key$day, title = "PC2 ~ PC3, color=day sampled")
-# 
-# # PCA with samples + top 10 genes contributing to PC scores 
-# fviz_pca_biplot(diff.pca, axes = c(2,3),repel = TRUE, label = c("ind", "var"), select.var = list(contrib = 10)) 
-```
-
-## Extract PC data for genes, showing their relative contributions to PC PC Axis 1 ~ Axis 2  
-
-```{r}
-# diff.pca.gene.data <- fviz_pca_var(diff.pca, axes = c(1,2), select.var = list(contrib = 100))$data 
-# head(diff.pca.gene.data)
-```
-
-# Extract PC scores for each sample - are they distributed normally in multivarite space? 
-
-```{r}
-# pca.sample.scores <- diff.pca$ind
-# hist(unlist(as.data.frame(pca.sample.scores)[1:3], use.names=FALSE), main="Histogram of PC scores for dimensions 1, 2 & 3") #should have normal distribution for multivariate normality 
-```
-
-## Prepare data for downtream statistics (if desired) 
-
-The following creates a master dataframe from the differentially expressed genes with sample id, treatment info, and counts, in long format 
-
-# Note: instead of `data.frame(t(diffex.all.counts)) %>%` you could easily swap in `data.frame(t(counts(dds.larvae))) %>%` go generate the same dataframe, but with all genes (not just differentially expressed ones)
-
-```{r}
-# counts4stats <- key %>% 
-#   mutate(sample_stage=as.character(sample_stage)) %>%
-#   right_join(
-#     data.frame(t(diffex.all.counts)) %>% 
-#   rownames_to_column("sample_stage")
-#   ) %>% 
-#   pivot_longer(cols=starts_with("TRINITY"), values_to = "count", names_to = "gene")
-# head(counts4stats)
-```
-
-## Even more visualization 
-
-### MA-plots
-
-In DESeq2, the function plotMA shows the log2 fold changes attributable to a given variable over the mean of normalized counts for all the samples in the DESeqDataSet. Points will be colored **red if the padj<0.05**. Points which fall out of the window are plotted as open triangles pointing either up or down.
-
-```{r}
-# plotMA(res.all.status, main="DEG by infection status\nLog2 fold change ~ mean of normalized counts")
-# 
-# plotMA(res.all.ColdVSWarm, main="DEGs between Cold & Warm\nLog2 fold change ~ mean of normalized counts")
-# plotMA(res.all.AmbVSWarm, main="DEGs between Ambient & Warm\nLog2 fold change ~ mean of normalized counts")
-# plotMA(res.all.ColdVSAmb, main="DEGs between Ambient & Cold\nLog2 fold change ~ mean of normalized counts")
-# 
-# plotMA(res.all.9vs26, main="DEGs between Day 9 & Day 26\nLog2 fold change ~ mean of normalized counts")
-# plotMA(res.all.9vs12, main="DEGs between Day 9 & Day 12\nLog2 fold change ~ mean of normalized counts")
-# plotMA(res.all.12vs26, main="DEGs between Day 12 & Day 26\nLog2 fold change ~ mean of normalized counts")
-```
-
-### You can also make MA-plots with transformations 
-
-Shrinkage of effect size (LFC estimates) is useful for visualization and ranking of genes. To shrink the LFC, we pass the dds object to the function lfcShrink. Below we specify to use the apeglm method for effect size shrinkage (Zhu, Ibrahim, and Love 2018), which improves on the previous estimator.
-
-We provide the dds object and the name or number of the coefficient we want to shrink, where the number refers to the order of the coefficient as it appears in resultsNames(dds).
-
-### Here we apply `lfcShrink()` function to the dds.larvae.DESeq object, and specify `coef=2` to specify that we want to examine DEGs between infection status by each shrinkage method. 
-
-```{r}
-# resultsNames(dds.larvae.DESeq) # Check the order of coefficients to use in the lfcShrink function.
-# # use `coef=2` to refers to infection status 
-# 
-# # Generate MA-plots after the different effect size shrinkage methods 
-# par(mfrow=c(1,3), mar=c(4,4,2,1))
-# plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="apeglm"),  main="apeglm")
-# plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="normal"), main="normal")
-# plotMA(lfcShrink(dds.larvae.DESeq, coef=2, type="ashr"), main="ashr")
-```

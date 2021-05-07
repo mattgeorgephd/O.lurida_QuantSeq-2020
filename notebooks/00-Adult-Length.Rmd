@@ -1,0 +1,203 @@
+---
+title: "00-Adult-Length"
+author: "Laura H Spencer"
+date: "4/23/2021"
+output: html_document
+---
+
+# Assess adult oyster length after temperature treatment, pH treatment. 
+
+NOTE: Population codes are as follows: 
+- NF= Fidalgo Bay (FB)
+- HL= Dabob Bay (DB)
+- SN= Oyster Bay Cohort 1 (OB1)
+- K= Oyster Bay Cohort 2 (OB2) - I remove the "K" population, we don't have expression data for those adults 
+
+
+```{r}
+broodstock.length <- read.csv("../raw-data/broodstock-length-data.csv", header=T, na.strings = NA) %>%
+    mutate_each_(funs(factor(.)),c("Population", "Temperature", "pH")) %>% filter(Population!="K") %>% droplevels() 
+
+# Change factor orders for plots 
+broodstock.length$pH <- factor(broodstock.length$pH, levels = c("Pre-pH",  "Low", "Ambient"))
+broodstock.length$Population <- factor(broodstock.length$Population, levels = c("HL", "NF", "SN"))
+broodstock.length$Temperature <- factor(broodstock.length$Temperature, levels = c(6, 10))
+brood.col.lengths <- c("white","gray55","gray85")[as.numeric(broodstock.length$pH)]
+names(brood.col.lengths) <-broodstock.length$pH
+```
+
+# Explore data via plots 
+```{r}
+    
+ggplot(data = subset(broodstock.length, pH!="Pre-pH")) + theme_minimal() + 
+    geom_boxplot(aes(x=Temperature:pH, y=Weight/Length, col=Temperature:pH)) + facet_wrap(~Population)
+
+# Size by temp (before pH exposures)
+ggplot(data = subset(broodstock.length, pH=="Pre-pH"), aes(x=Temperature, y=Length)) + 
+    theme_minimal() + geom_boxplot() + 
+    geom_jitter(aes(col=Population)) #+ facet_wrap(~Population, nrow = 1)
+
+# Size by temp & pH (after pH exposures)
+ggplot(data = subset(broodstock.length, pH!="Pre-pH"), aes(x=Temperature:pH, y=Length)) + 
+    theme_minimal() + geom_boxplot() + 
+    geom_jitter(aes(col=Population)) #+ facet_wrap(~Population, nrow = 1)
+
+# Size by pH (after pH exposures)
+ggplot(data = broodstock.length, aes(x=pH, y=Length, col=pH)) + 
+    theme_minimal() + geom_boxplot() + 
+    geom_jitter() + facet_wrap(~Population, nrow = 1)
+
+# Size by temp & pH (after pH exposures)
+ggplot(data = broodstock.length, aes(x=Temperature:pH, y=Length)) + 
+    theme_minimal() + geom_boxplot() + 
+    geom_jitter(aes(col=Population)) #+ facet_wrap(~Population, nrow = 1)
+```
+
+
+# Mean lengths 
+```{r}
+aggregate(Length ~ Population + pH + Temperature, data=broodstock.length, mean)
+aggregate(Length ~ Population + pH, data=broodstock.length, mean)
+aggregate(Length ~ Population, data=broodstock.length, mean)
+aggregate(Length ~ Population, data=subset(broodstock.length, pH!="Pre-pH"), mean)
+```
+
+# Check length data for normality 
+```{r}
+qqnorm(broodstock.length$Length)
+hist(broodstock.length$Length)
+```
+
+Test for sign. differences among treatments _after_ temperature treatments but _before_ pCO2 treatments  
+
+```{r}
+anova(lm(Length ~ Temperature, data=subset(broodstock.length, pH=="Pre-pH"))) #No eff. of temp  
+Anova(lmer(Length ~ Temperature + (1|Population), data=subset(broodstock.length, pH=="Pre-pH")), type=2) #no
+```
+
+# Length differences after pH treatments? 
+
+```{r}
+anova(lm(Length ~ pH, data=subset(broodstock.length, pH!="Pre-pH"))) #No
+```
+
+# Length differences after pH treatments compared to before? 
+
+```{r}
+anova(lm(Length ~ pH + Temperature:pH, data=broodstock.length)) #no interaction. Assess using type II sums of squares, where I look at effects of pH and temperature after controlling for the other factor 
+Anova(lm(Length ~ pH + Temperature:pH, data=broodstock.length), type=2) #pH sign. BUT that includes a "pre-pH" treat - so need to check that out. 
+TukeyHSD(aov(Length ~ pH, data=broodstock.length), type=2) #both sign. 
+```
+
+Try mixed effect model, with Population as random effect
+
+```{r}
+display(lmer(Length ~ Temperature*pH + (1|Population), data=broodstock.length))
+Anova(lmer(Length ~ Temperature*pH + (1|Population), data=broodstock.length), type=2)
+
+display(lmer(Length ~ Temperature+pH+ (1|Population), data=broodstock.length)) 
+Anova(lmer(Length ~ Temperature+pH + (1|Population), data=broodstock.length), type=2) #with Pop as random effect and using type II SS, still sign. influence of temp and pH 
+```
+# Compare sizes by each population 
+
+Test for sign. differences among treatments _after_ temperature treatments but _before_ pCO2 treatments  
+
+```{r}
+anova(lm(Length ~ Population*Temperature, data=subset(broodstock.length, pH=="Pre-pH"))) #No eff. of temp, but definitely Pop=specific size 
+```
+
+# Length differences after pH treatments? 
+
+```{r}
+anova(lm(Length ~ Population*pH, data=subset(broodstock.length, pH!="Pre-pH"))) #No diff. among pH treatments, nor interaction 
+```
+
+# Length differences after pH treatments compared to before? 
+
+```{r}
+Anova(lm(Length ~ Temperature*pH, data=subset(broodstock.length, Population=="HL")), type=2) # Dabob Baby - no differences between any pco2 (pre, ambient, high)
+
+Anova(lm(Length ~ Temperature*pH, data=subset(broodstock.length, Population=="NF")), type=2) # Fidalgo Baby - yes, difference somewhere, but where? 
+TukeyHSD(aov(Length ~ pH, data=subset(broodstock.length, Population=="NF")), type=2) #FB larger after ambient pCO2 compared to before 
+
+Anova(lm(Length ~ Temperature*pH, data=subset(broodstock.length, Population=="SN")), type=2) # Oyster Baby - yes, difference somewhere, but where? 
+
+TukeyHSD(aov(Length ~ pH, data=subset(broodstock.length, Population=="SN")), type=2) #Oyster Bay much larger after ambient pCO2 compared to before 
+```
+# =======
+# Figure 
+
+```{r}
+#pdf(file="Figures/broodstock-height.pdf", width=5, height = 5)
+# ggplot(broodstock.length, aes(x=Population, y= Length, fill=pH)) +  geom_boxplot() + 
+#   geom_point(size=1.25, position=position_jitterdodge(jitter.width = 0.18, jitter.height = 0, dodge.width = 0.75),aes(group=pH)) + 
+#     labs(title=(expression(paste("Shell height by cohort, ", pCO[2], " exposure"))), y=expression("Shell height (mm)")) + 
+#   theme_bw(base_size = 12) + 
+#   theme(plot.title = element_text(size = 14, hjust = 0, colour = "gray30"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.title.x = element_blank(), legend.position="bottom") +  
+#     geom_vline(xintercept = c(1.5, 2.5), colour="gray") + 
+#     scale_fill_manual(values=brood.col.lengths, name=element_blank(), labels = c(expression(pre-pCO[2]), expression(High-pCO[2]), expression(Ambient-pCO[2])))+
+#     scale_x_discrete(labels = c('Dabob Bay','Fidalgo Bay', "Oyster Bay C1",'Oyster Bay C2')) +
+#     scale_y_continuous(limits=c(min=min(broodstock.length$Length),max=max(broodstock.length$Length)))
+#dev.off()
+
+broodstock.length$treat <- as.factor(paste(broodstock.length$Temperature, broodstock.length$pH, sep="."))
+broodstock.length$treat <- factor(broodstock.length$treat, levels = c("6.Pre-pH", "10.Pre-pH","6.Low","10.Low","6.Ambient","10.Ambient"))
+
+# FIGURE FOR PAPER 
+#pdf(file="Figures/broodstock-height.pdf", width=5, height = 5)
+ggplot(broodstock.length, aes(x=treat, y= Length)) +  geom_boxplot() + 
+  geom_point(size=1.25, position=position_jitterdodge(jitter.width = 1.5, jitter.height = 0, dodge.width = 0.75),aes(group=treat, col=Population)) + 
+    labs(title=(expression(paste("Adult shell height by temperature & ", pCO[2], " exposure"))), y=expression("Shell height (mm)")) + 
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(size = 14, hjust = 0, colour = "gray30"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), axis.title.x = element_blank(), legend.position="right", 
+        axis.text.x = element_text(size = 8)) +  
+    geom_vline(xintercept = c(2.5, 4.5), colour="gray") + 
+    scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3"), labels=c("HL"="Dabob Bay", "NF"="Fidalgo Bay", "SN"="Oyster Bay C1")) + #,"#e41a1c" 
+    scale_y_continuous(limits=c(min=min(broodstock.length$Length),max=1.06*max(broodstock.length$Length))) +
+    annotate("text", x = 1.5, y = 48, label = "a") +
+    annotate("text", x = 3.5, y = 48, label = "ab") +
+    annotate("text", x = 5.5, y = 48, label = "b") +
+    scale_x_discrete(labels=c("6.Pre-pH" = "6°C\n(pre-pCO2)", "10.Pre-pH" = "10°C\n(pre-pCO2)", 
+                                    "6.Low" = "6°C\nHigh pCO2", "10.Low" = "10°C\nHigh pCO2", 
+                                    "6.Ambient" = "6°C\nAmbient pCO2", "10.Ambient" = "10°C\nAmbient pCO2")) +
+    guides(colour = guide_legend(override.aes = list(size=4.5)))
+#dev.off()
+
+
+# ANOTHER OPTION: FIGURE FOR PAPER 
+#pdf(file="Figures/broodstock-height.pdf", width=5, height = 5)
+ggplot(broodstock.length, aes(x=pH, y= Length)) +  geom_boxplot(outlier.shape = NA) + 
+  geom_point(size=1.5, alpha=0.75, position=position_jitterdodge(jitter.width = .8, jitter.height = 0, dodge.width = 0.75),aes(group=treat, col=Population)) + 
+    labs(title=(expression(paste("Adult shell height by, ", pCO[2], " exposure & cohort"))), y=expression("Shell height (mm)")) + 
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(size = 14, hjust = 0, colour = "gray30"), panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), panel.background = element_blank(), axis.title.x = element_blank(), legend.position="right") +  
+    scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3"), labels=c("HL"="Dabob Bay", "NF"="Fidalgo Bay", "SN"="Oyster Bay C1"), name="Cohort") + #,"#e41a1c" 
+    scale_y_continuous(limits=c(min=min(broodstock.length$Length),max=1.06*max(broodstock.length$Length))) +
+    annotate("text", x = 1, y = 48, label = "a") +
+    annotate("text", x = 2, y = 48, label = "ab") +
+    annotate("text", x = 3, y = 48, label = "b") +
+    scale_x_discrete(labels=c("Pre-pH" = "Pre-pCO2\nExposure", "Low" = "High pCO2", 
+                                    "Ambient" = "Ambient pCO2")) +
+    guides(colour = guide_legend(override.aes = list(size=4.5)))
+#dev.off()
+
+# BEST FIGURE OPTION FOR PAPER, broken up by population. HAVE TO annotate by hand in powerpoint, though. (easiest way to add letters)
+ggplot(broodstock.length, aes(x=pH, y= Length)) +  geom_boxplot(outlier.shape = NA) + 
+  geom_point(size=1.5, alpha=0.75, position=position_jitterdodge(jitter.width = .8, jitter.height = 0, dodge.width = 0.75),
+             aes(group=treat, col=Population)) + 
+    labs(title=(expression(paste("Adult shell height by, ", pCO[2], " exposure & cohort"))), y=expression("Shell height (mm)")) + 
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(size = 14, hjust = 0, colour = "gray30"), panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), panel.background = element_blank(), 
+        axis.title.x = element_blank(), legend.position="right", axis.text.x = element_text(size=8)) +  
+    scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3"), 
+                       labels=c("HL"="Dabob Bay", "NF"="Fidalgo Bay", "SN"="Oyster Bay C1"), name="Cohort") + #,"#e41a1c" 
+    scale_y_continuous(limits=c(min=min(broodstock.length$Length),max=1.06*max(broodstock.length$Length))) +
+        scale_x_discrete(labels=c("Pre-pH" = "Pre-pCO2\nExposure", "Low" = "High\npCO2", 
+                                    "Ambient" = "Ambient\npCO2")) +
+    guides(colour = guide_legend(override.aes = list(size=4.5))) +
+  facet_wrap(~Population, labeller = labeller(Population=c("HL"="Dabob Bay","NF"="Fidalgo Bay","SN"="Oyster Bay")))
+```
+

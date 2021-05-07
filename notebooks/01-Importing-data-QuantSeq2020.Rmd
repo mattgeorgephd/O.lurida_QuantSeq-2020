@@ -54,7 +54,7 @@ filenames <- data.frame(read.table("../qc-processing/featureCounts/filenames-ded
 # Fill in NA value on the "Undetermined" row  
 filenames[filenames$filename == "Und","sample_stage"] <- "Undetermined"
 
-key <- full_join(sample.info, filenames)
+key <- full_join(sample.info, filenames) 
 ```
 
 ### Import counts matrix file as dataframe, extract sample # from file/column names to simplify them 
@@ -98,14 +98,14 @@ multiqc.stats <- multiqc.stats %>%
 No. of PCR cycles strongly correlates positively % duplicates & % fails and negatively with total unique reads, less strongly with GC content. 
 
 ```{r}
-cor(multiqc.stats %>%drop_na(population) %>% dplyr::select_if(is.numeric), use="complete.obs") %>% corrplot(tl.cex=.45)
+cor(multiqc.stats %>%drop_na(population) %>% dplyr::select_if(is.numeric), use="complete.obs") %>% corrplot::corrplot(tl.cex=.45)
 ```
 
 ## Look closer at pcr cycles and read stummary stats  
 
 ```{r}
 chart.Correlation(multiqc.stats %>%drop_na(population) %>%
-                    select(pcr.cycles, percent_duplicates, 
+                    dplyr::select(pcr.cycles, percent_duplicates, 
                            percent_gc, percent_fails, total_unique), 
                   histogram=F, pch=19)
 ```
@@ -137,10 +137,10 @@ multiqc.stats %>% filter(pcr.cycles<=17) %>% group_by(stage, population, pCO2.pa
 ## Check out pcr.cycles correation after removing all samples with >17 pcr cycles 
 
 ```{r}
-cor(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17) %>% dplyr::select_if(is.numeric), use="complete.obs") %>% corrplot(tl.cex=.45)
+cor(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17) %>% dplyr::select_if(is.numeric), use="complete.obs") %>% corrplot::corrplot(tl.cex=.45)
 
 chart.Correlation(multiqc.stats %>%drop_na(population) %>% filter(pcr.cycles<=17) %>%
-                    select(pcr.cycles, percent_duplicates, 
+                    dplyr::select(pcr.cycles, percent_duplicates, 
                            percent_gc, percent_fails, total_unique), 
                   histogram=F, pch=19)
 # much better. 
@@ -179,7 +179,7 @@ ggplotly(ggplot(data = data.frame(colSums(counts.filtered)) %>%
 ## OPTIONAL: Remove genes that were in the No-Tissue Control, look at counts again  
 
 ```{r}
-# remove.genes <- counts %>% select("571_larvae") %>% rownames_to_column("gene") %>% filter(`571_larvae` > 100) %>% select(gene) %>% unlist() %>% as.vector()
+# remove.genes <- counts %>% dplyr::select("571_larvae") %>% rownames_to_column("gene") %>% filter(`571_larvae` > 100) %>% dplyr::select(gene) %>% unlist() %>% as.vector()
 # counts.filtered <- counts #[-which(rownames(counts) %in% remove.genes),]
 ```
 
@@ -219,4 +219,10 @@ Olurida_gene_uniprot <- read_delim(file = here::here("references", "Olurida_v081
 save(Olurida_gene_uniprot, file = "../references/Olurida_gene_uniprot")
 ```
 
+## Read in GO Slim ~ GO table 
 
+```{r}
+GOslim<- read_delim(file = here::here("references", "GO-GOslim.sorted"), delim = "\t", col_names = F) 
+colnames(GOslim) <- GOslim[nrow(GOslim),]
+save(GOslim, file="../references/GOslim")
+```

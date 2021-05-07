@@ -20,8 +20,6 @@ Reduce(intersect, list(rownames(diffex.larvae.DBFB),
                        rownames(diffex.larvae.DBOB2),
                        rownames(diffex.larvae.FBOB1),
                        rownames(diffex.larvae.FBOB2)))
-
-
 ```
 
 ### Plot the gene that's diff across all pops 
@@ -54,5 +52,106 @@ Olurida_gene_uniprot %>% filter(Name %in% degs.pops) %>% drop_na(SPID) %>% selec
 
 Olurida_gene_uniprot %>% filter(Name %in% colnames(counts.t.larvae)) %>% drop_na(SPID) %>% select(SPID) %>%
     unlist() %>% as.vector() %>% write_clip()
+```
+# Bubble plots of enriched functions among cohorts in adults and larvae 
+
+```{r}
+# Plot enriched Biological Processes 
+pdf(file="results/EnrichedBP-cohorts.pdf", height = 10, width = 7.5)
+rbind(all.go.enriched.cohorts.adults %>% mutate(stage="adults"), 
+      all.go.enriched.cohorts.larvae %>% mutate(stage="larvae")) %>% 
+  mutate_each_(funs(factor(.)),c("go", "stage", "contrast")) %>% 
+  filter(GO.category=="Biological Processes") %>%
+  ggplot(aes(y=str_wrap(process),x=contrast:stage, col=stage)) + 
+  geom_point(aes(alpha=fdr,size=count))+
+ facet_wrap(~GO.category,scales="free", nrow = 2) +
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.3), 
+              breaks = c(.25, .5, .75, 1), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("Gene count", range = c(3,12), breaks = c(2, 5, 10), 
+             guide = guide_legend(override.aes = list(col="gray50"))) + 
+  scale_color_manual(name="Stage", values=c("#386cb0", "#984ea3"),
+             guide = guide_legend(override.aes = list(size=4))) + 
+  theme_cleveland() + 
+  theme(axis.title.x=element_blank(), axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(), 
+        legend.position = "right", axis.text.y=element_text(size=7.25), 
+        plot.title = element_text(size=10)) +
+  ylab("Enriched Gene Ontology (GO) Term") + 
+  ggtitle("Enriched function among cohorts\nin Adults & Larvae") +
+  geom_vline(xintercept = c(2.5, 4.5), colour="gray") +
+  annotate("text", x = 1.4, y = -.75, label = "Dabob Bay\nvs. Fidalgo Bay", size=2.8, col="gray15") +  
+  annotate("text", x = 3.5, y = -.75, label = "Dabob Bay\nvs. Oyster Bay", size=2.8, col="gray15") +  
+  annotate("text", x = 5.6, y = -.75, label = "Fidalgo Bay\nvs. Oyster Bay", size=2.8, col="gray15") +  
+  coord_cartesian(clip = "off", ylim = c(-1.75, 63.5))
+dev.off()
+
+# Plot enriched Molecular Functions
+pdf(file="results/EnrichedMF-cohorts.pdf", height = 6.75, width = 7.25)
+rbind(all.go.enriched.cohorts.adults %>% mutate(stage="Adults"), 
+      all.go.enriched.cohorts.larvae %>% mutate(stage="Larvae")) %>% 
+  mutate_each_(funs(factor(.)),c("go", "stage", "contrast")) %>% 
+  filter(GO.category=="Molecular Function") %>%
+  ggplot(aes(y=str_wrap(process),x=contrast:stage, col=stage)) + 
+  geom_point(aes(alpha=fdr,size=count))+
+ facet_wrap(~GO.category,scales="free", nrow = 2) +
+  scale_alpha("FDR-adjusted\nP-value", range = c(1,0.3), 
+              breaks = c(.25, .5, .75, 1), guide = guide_legend(override.aes = list(size=4))) + 
+  scale_size("Gene count", range = c(3,12), breaks = c(2, 5, 10), 
+             guide = guide_legend(override.aes = list(col="gray50"))) + 
+  scale_color_manual(name="Stage", values=c("#386cb0", "#984ea3"),
+             guide = guide_legend(override.aes = list(size=4))) + 
+  theme_cleveland() + 
+ theme(axis.title.x=element_blank(), axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(),
+        legend.position = "right", axis.text.y=element_text(size=7), 
+        plot.title = element_text(size=10)) +
+  ylab("Enriched Gene Ontology (GO) Term") + 
+   ggtitle("Enriched function among cohorts\nin Adults & Larvae") +
+  geom_vline(xintercept = c(2.5, 4.5), colour="gray") +
+  annotate("text", x = 1.4, y = -.17, label = "Dabob Bay\nvs. Fidalgo Bay", size=2.6, col="gray15") +  
+  annotate("text", x = 3.5, y = -.17, label = "Dabob Bay\nvs. Oyster Bay", size=2.6, col="gray15") +  
+  annotate("text", x = 5.6, y = -.17, label = "Fidalgo Bay\nvs. Oyster Bay", size=2.6, col="gray15") +  
+  coord_cartesian(clip = "off", ylim = c(-0.75, 38))
+dev.off()
+```
+
+# Are any genes consitutively expressed at different levels in cohorts that are ALSO DEGs in response to high pCO2?
+
+```{r}
+#genes diff expressed by DB in high pCO2 that are also diff among DB & FB  
+filter(Olurida_gene_uniprot, Name %in% Reduce(intersect, list(rownames(diffex.adult.DB),rownames(diffex.adult.DBFB.amb))))
+
+#genes diff expressed by DB in high pCO2 that are also diff among DB & OB1 
+filter(Olurida_gene_uniprot, Name %in% Reduce(intersect, list(rownames(diffex.adult.DB),rownames(diffex.adult.DBOB1.amb)))) 
+
+#genes diff expressed by FB in high pCO2 that are also diff among FB and DB
+filter(Olurida_gene_uniprot, Name %in% Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.DBFB.amb)))) 
+
+#genes diff expressed by FB in high pCO2 that are also diff among FB and OB
+filter(Olurida_gene_uniprot, Name %in% Reduce(intersect, list(rownames(diffex.adult.FB),rownames(diffex.adult.FBOB1.amb)))) 
+
+```
+
+# Plot those genes 
+
+```{r}
+g <- filter(Olurida_gene_uniprot, Name %in% Reduce(intersect, list(rownames(diffex.adult.DB),rownames(diffex.adult.DBOB1.amb))))
+pops <- c("Dabob Bay", "Oyster Bay C1")
+genes_plots <- list()
+for (i in 1:length(g$Name)) {
+print(i)
+a <- plotCounts(dds.adult.DESeq, gene=g$Name[i], 
+             intgroup=c("population", "pCO2.parent"), returnData = TRUE) %>%rownames_to_column("sample")
+b <-  ggplot(a, aes(x=population:pCO2.parent, y=count, color=population:pCO2.parent, label=sample)) +
+    #geom_point(position=position_jitter(w = 0.1,h = 0)) +
+  geom_boxplot() +
+      geom_jitter() +
+      theme_bw() +
+      ggtitle(g$SPID[i]) +
+      theme(plot.title = element_text(hjust = 0.5))
+genes_plots[[i]] <- b
+}
+genes_plots
+ggplotly(genes_plots[[11]])
 ```
 

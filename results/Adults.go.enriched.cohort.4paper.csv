@@ -1,0 +1,75 @@
+"","go","process","count","genes","fold_enrichment","p_value","fdr","perc_total","contrast","GO.category","term","GOSlim_bin","aspect"
+"1","GO:0006310","DNA recombination",6,"Q9H5L6, Q9DE26, Q14191, Q9H611, Q5ZJT0, Q9FT73",5.9406150583245,0.00318301462747534,1,0.0967741935483871,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","DNA recombination","DNA metabolism","P"
+"2","GO:1901214","regulation of neuron death",3,"Q5S007, Q9UHD2, D3ZUQ0",25.6189024390244,0.00552870413415572,1,0.0483870967741935,"Dabob Bay ~
+Fidalgo Bay","Biological Processes",NA,NA,NA
+"3","GO:0071346","cellular response to interferon-gamma",3,"Q61830, Q8CGC7, Q76LX8",18.6319290465632,0.0105550413995389,1,0.0483870967741935,"Dabob Bay ~
+Fidalgo Bay","Biological Processes",NA,NA,NA
+"4","GO:0032508","DNA duplex unwinding",4,"Q14191, Q9H611, Q5ZJT0, Q9FT73",8.53963414634146,0.0108977700671976,1,0.0645161290322581,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","DNA duplex unwinding","DNA metabolism","P"
+"5","GO:0006508","proteolysis",10,"P69527, Q8C8H8, Q54G06, Q95M12, P06868, Q76LX8, Q61391, Q9WTZ2, Q08BB2, A3KG59",2.70027957196568,0.0111865342222833,1,0.161290322580645,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","proteolysis","protein metabolism","P"
+"6","GO:0098656","anion transmembrane transport",3,"O95477, O15438, Q9R1N3",12.8094512195122,0.0219664549739379,1,0.0483870967741935,"Dabob Bay ~
+Fidalgo Bay","Biological Processes",NA,NA,NA
+"7","GO:0000209","protein polyubiquitination",5,"Q8CFD5, Q949V6, Q86Y13, O95271, Q9UKA2",4.11548633558625,0.0322964693613828,1,0.0806451612903226,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","protein polyubiquitination","protein metabolism","P"
+"8","GO:0043171","peptide catabolic process",3,"P69527, Q76LX8, Q08BB2",9.7595818815331,0.036677469768977,1,0.0483870967741935,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","peptide catabolic process","other metabolic processes","P"
+"9","GO:0009636","response to toxic substance",4,"Q9BX84, Q9Z2J0, Q76LX8, Q9WTR6",5.25515947467167,0.0394309563296359,1,0.0645161290322581,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","response to toxin","other biological processes","P"
+"10","GO:0007040","lysosome organization",3,"Q5S007, O95477, Q9WTZ2",8.91092258748674,0.0433685603278639,1,0.0483870967741935,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","lysosome organization","cell organization and biogenesis","P"
+"11","GO:0051607","defense response to virus",4,"Q8K268, Q53G44, Q9UGM3, Q9UHD2",4.33759194734805,0.0632698464434495,1,0.0645161290322581,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","defense response to virus","stress response","P"
+"12","GO:0006810","transport",12,"Q9Z2J0, P49793, Q8VCL5, B9EJ86, Q01650, O15438, A4QN56, Q7ZV68, Q9WTR6, Q32LQ6, Q99758, O97562",1.759237935727,0.0753593709681249,1,0.193548387096774,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","transport","transport","P"
+"13","GO:0060355","positive regulation of cell adhesion molecule production",2,"P49817, Q2LK54",19.5191637630662,0.0973425945844833,1,0.032258064516129,"Dabob Bay ~
+Fidalgo Bay","Biological Processes","positive regulation of cell adhesion molecule production","other biological processes","P"
+"14","GO:0005524","ATP binding",26,"Q63413, Q5S007, O95477, O42127, Q9UHD2, Q9FT73, Q8CGC7, Q4QY64, P41252, Q14191, Q9BYK8, O15438, Q5ZJT0, Q8K268, Q9BX84, O43301, Q1ZXD6, E9QAM5, Q55E58, Q9H611, O02811, Q9WV04, Q9DE26, Q15477, Q8MVR1, Q99758",1.55526041172564,0.0219873649839521,1,0.40625,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","ATP binding","other molecular function","F"
+"15","GO:0008233","peptidase activity",7,"Q8C8H8, Q54G06, Q95M12, Q76LX8, Q61391, Q9WTZ2, Q08BB2",3.13752187226597,0.0233611103148242,1,0.109375,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","peptidase activity","other molecular function","F"
+"16","GO:0070006","metalloaminopeptidase activity",3,"P69527, B1AVD1, Q54G06",10.757217847769,0.0305421823722159,1,0.046875,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","metalloaminopeptidase activity","other molecular function","F"
+"17","GO:0003678","DNA helicase activity",3,"Q14191, Q9H611, Q5ZJT0",7.4473046638401,0.0599380805355196,1,0.046875,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","DNA helicase activity","other molecular function","F"
+"18","GO:0015293","symporter activity",5,"F4KD71, Q9Z2J0, A4QN56, Q9R1N3, Q6P2X9",3.29302587176603,0.0638484775380125,1,0.078125,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","symporter activity","transporter activity","F"
+"19","GO:0000149","SNARE binding",3,"Q5S007, P49817, O70439",6.45433070866142,0.0771341404958727,1,0.046875,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","SNARE binding","other molecular function","F"
+"20","GO:0005525","GTP binding",8,"Q5S007, Q9NUV9, Q53G44, Q1ZXD6, Q55E58, Q5U316, Q8MVR1, P02552",2.13366304418559,0.07894867599975,1,0.125,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","GTP binding","other molecular function","F"
+"21","GO:0030674","protein binding, bridging",3,"P49817, P25067, O88843",6.05093503937008,0.0862465042360621,1,0.046875,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","protein binding, bridging","other molecular function","F"
+"22","GO:0016887","ATPase activity",6,"Q8K268, Q63413, O95477, Q14191, Q9WV04, Q99758",2.4824348879467,0.0921109631614979,1,0.09375,"Dabob Bay ~
+Fidalgo Bay","Molecular Function","ATPase activity","other molecular function","F"
+"23","GO:0010638","positive regulation of organelle organization",2,"P16157, Q02357",120.042857142857,0.016356249141001,1,0.2,"Dabob Bay ~
+Oyster Bay","Biological Processes","positive regulation of organelle organization","cell organization and biogenesis","P"
+"24","GO:0043568","positive regulation of insulin-like growth factor receptor signaling pathway",2,"Q6NSJ0, Q61371",48.0171428571429,0.0403974744076494,1,0.2,"Dabob Bay ~
+Oyster Bay","Biological Processes","positive regulation of insulin-like growth factor receptor signaling pathway","signal transduction","P"
+"25","GO:0016322","neuron remodeling",2,"Q9W0A0, Q5ND28",21.825974025974,0.0867558393595571,1,0.2,"Dabob Bay ~
+Oyster Bay","Biological Processes","neuron remodeling","developmental processes","P"
+"26","GO:0007420","brain development",4,"Q810B3, Q14191, Q61371, Q9WTR6",3.69362637362637,0.0909235662337102,1,0.4,"Dabob Bay ~
+Oyster Bay","Biological Processes","brain development","developmental processes","P"
+"27","GO:0004386","helicase activity",4,"O95786, Q14191, Q9BYK8, E9QAM5",5.41145403531936,0.0362253517143357,1,0.222222222222222,"Dabob Bay ~
+Oyster Bay","Molecular Function","helicase activity","other molecular function","F"
+"28","GO:0005509","calcium ion binding",9,"O75095, P98133, D3YXG0, Q76LX8, Q9BQ16, Q9UPV7, A5PK46, P20241, Q8NDA2",2.25577910958904,0.041809012577482,1,0.5,"Dabob Bay ~
+Oyster Bay","Molecular Function","calcium ion binding","other molecular function","F"
+"29","GO:0005044","scavenger receptor activity",3,"Q9UGM3, Q5ND28, Q96KG7",7.01797945205479,0.0662528403419201,1,0.166666666666667,"Dabob Bay ~
+Oyster Bay","Molecular Function","scavenger receptor activity","signal transduction activity","F"
+"30","GO:0008093","cytoskeletal adaptor activity",2,"P16157, Q02357",20.4159402241594,0.0925411606476408,1,0.111111111111111,"Dabob Bay ~
+Oyster Bay","Molecular Function","cytoskeletal adaptor activity","cytoskeletal activity","F"
+"31","GO:0006351","transcription, DNA-templated",7,"P56931, Q9CU65, Q5U208, Q9BYK8, E9QAM5, P31396, O60290",3.32547489823609,0.0116465794903291,1,0.388888888888889,"Fidalgo Bay ~
+Oyster Bay","Biological Processes","transcription, DNA-dependent","RNA metabolism","P"
+"32","GO:0006886","intracellular protein transport",3,"Q4R532, O70439, Q9ULJ7",8.61551606288448,0.0429109337021374,1,0.166666666666667,"Fidalgo Bay ~
+Oyster Bay","Biological Processes","intracellular protein transport","transport","P"
+"33","GO:0007049","cell cycle",3,"P56931, Q5U208, D3YXG0",6.29595404595405,0.0748730382005865,1,0.166666666666667,"Fidalgo Bay ~
+Oyster Bay","Biological Processes","cell cycle","cell cycle and proliferation","P"
+"34","GO:0006355","regulation of transcription, DNA-templated",5,"P56931, Q9CU65, Q5U208, E9QAM5, O60290",2.85894120849211,0.0801915317816323,1,0.277777777777778,"Fidalgo Bay ~
+Oyster Bay","Biological Processes","regulation of transcription, DNA-dependent","RNA metabolism","P"
+"35","GO:0030674","protein binding, bridging",3,"Q8C8R3, P25067, Q05707",34.9303977272727,0.00296040120869152,0.186505276147566,0.3,"Fidalgo Bay ~
+Oyster Bay","Molecular Function","protein binding, bridging","other molecular function","F"
+"36","GO:0030374","ligand-dependent nuclear receptor transcription coactivator activity",2,"Q9BYK8, E9QAM5",43.8342245989305,0.0427120799673837,1,0.2,"Fidalgo Bay ~
+Oyster Bay","Molecular Function","ligand-dependent nuclear receptor transcription coactivator activity","transcription regulatory activity","F"
+"37","GO:0008270","zinc ion binding",5,"Q05915, Q9CU65, Q5U208, Q7TPV2, P31396",2.69993412384717,0.0945675883553234,1,0.5,"Fidalgo Bay ~
+Oyster Bay","Molecular Function","zinc ion binding","other molecular function","F"

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Session genome="https://owl.fish.washington.edu/halfshell/genomic-databank/Olurida_v081.fa" hasGeneTrack="false" hasSequenceTrack="true" locus="Contig108707:1-1496" path="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/admin/igv_session.xml" version="8">
+    <Resources>
+        <Resource path="../../../../Users/laura/Documents/roberts-lab/paper-oly-mbdbs-gen/genome-features/Olurida_v081-20190709.gene.gff"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/156.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/169.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/168.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/181.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/161.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/171.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/184.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/139.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/185.sorted.bam"/>
+        <Resource path="../../../../Users/laura/Documents/roberts-lab/paper-oly-mbdbs-gen/genome-features/20190709-Olurida_v081.stringtie.gtf"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/183.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/172.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/137.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/140.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/159.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/162.sorted.bam"/>
+        <Resource path="../qc-processing/bowtie/mapped-sorted/141.sorted.bam"/>
+    </Resources>
+    <Panel height="776" name="DataPanel" width="1423">
+        <Track clazz="org.broad.igv.track.SequenceTrack" fontSize="10" height="40" id="Reference sequence" name="Reference sequence" visible="true"/>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/137.sorted.bam_junctions" name="137.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/137.sorted.bam" name="137.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track clazz="org.broad.igv.track.FeatureTrack" color="0,0,178" displayMode="EXPANDED" fontSize="10" height="40" id="/Users/laura/Documents/roberts-lab/paper-oly-mbdbs-gen/genome-features/Olurida_v081-20190709.gene.gff" name="Olurida_v081-20190709.gene.gff" visible="true"/>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="204,0,0" colorScale="ContinuousColorScale;0.0;10.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/185.sorted.bam_coverage" name="185 FB High" snpThreshold="0.2" visible="false" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="344.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/185.sorted.bam_junctions" name="185.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/185.sorted.bam" name="185.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="204,0,0" colorScale="ContinuousColorScale;0.0;17.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/184.sorted.bam_coverage" name="184 FB High" snpThreshold="0.2" visible="false" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1384.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/184.sorted.bam_junctions" name="184.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/184.sorted.bam" name="184.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track clazz="org.broad.igv.track.FeatureTrack" color="0,0,178" fontSize="10" id="/Users/laura/Documents/roberts-lab/paper-oly-mbdbs-gen/genome-features/20190709-Olurida_v081.stringtie.gtf" name="20190709-Olurida_v081.stringtie.gtf" visible="true"/>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="204,0,0" colorScale="ContinuousColorScale;0.0;2789.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/184.sorted.bam_coverage" name="184 FB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="204,0,0" colorScale="ContinuousColorScale;0.0;555.0;255,255,255;175,175,175" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/185.sorted.bam_coverage" name="185 FB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="204,0,0" colorScale="ContinuousColorScale;0.0;80.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/183.sorted.bam_coverage" name="183 FB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/183.sorted.bam_junctions" name="183.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/183.sorted.bam" name="183.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="204,0,0" colorScale="ContinuousColorScale;0.0;20.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/181.sorted.bam_coverage" name="181 FB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/181.sorted.bam_junctions" name="181.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/181.sorted.bam" name="181.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="255,204,51" colorScale="ContinuousColorScale;0.0;52.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/162.sorted.bam_coverage" name="162 FB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="255,204,51" colorScale="ContinuousColorScale;0.0;61.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/161.sorted.bam_coverage" name="161 FB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="255,204,51" colorScale="ContinuousColorScale;0.0;28.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/159.sorted.bam_coverage" name="159 FB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="255,204,51" colorScale="ContinuousColorScale;0.0;21.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/156.sorted.bam_coverage" name="156 FB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,153,102" colorScale="ContinuousColorScale;0.0;33.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/172.sorted.bam_coverage" name="172 DB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/172.sorted.bam_junctions" name="172.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/172.sorted.bam" name="172.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,153,102" colorScale="ContinuousColorScale;0.0;46.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/171.sorted.bam_coverage" name="171 DB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/171.sorted.bam_junctions" name="171.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/171.sorted.bam" name="171.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,153,102" colorScale="ContinuousColorScale;0.0;60.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/169.sorted.bam_coverage" name="169 DB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/169.sorted.bam_junctions" name="169.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/169.sorted.bam" name="169.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,153,102" colorScale="ContinuousColorScale;0.0;13.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/168.sorted.bam_coverage" name="168 DB High" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/168.sorted.bam_junctions" name="168.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/168.sorted.bam" name="168.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/162.sorted.bam_junctions" name="162.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/162.sorted.bam" name="162.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/161.sorted.bam_junctions" name="161.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/161.sorted.bam" name="161.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/159.sorted.bam_junctions" name="159.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/159.sorted.bam" name="159.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/156.sorted.bam_junctions" name="156.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/156.sorted.bam" name="156.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,51,204" colorScale="ContinuousColorScale;0.0;11.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/141.sorted.bam_coverage" name="141 DB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/141.sorted.bam_junctions" name="141.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/141.sorted.bam" name="141.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,51,204" colorScale="ContinuousColorScale;0.0;48.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/140.sorted.bam_coverage" name="140 DB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/140.sorted.bam_junctions" name="140.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/140.sorted.bam" name="140.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,51,204" colorScale="ContinuousColorScale;0.0;21.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/139.sorted.bam_coverage" name="139 DB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/139.sorted.bam_junctions" name="139.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/139.sorted.bam" name="139.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="0,51,204" colorScale="ContinuousColorScale;0.0;42.0;255,255,255;175,175,175" fontSize="10" height="40" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/137.sorted.bam_coverage" name="137 DB Ambient" snpThreshold="0.2" visible="true" windowFunction="null">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/184.sorted.bam_junctions" name="184.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/184.sorted.bam" name="184.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+        <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/185.sorted.bam_junctions" name="185.sorted.bam Junctions" visible="false"/>
+        <Track clazz="org.broad.igv.sam.AlignmentTrack" displayMode="EXPANDED" experimentType="OTHER" fontSize="10" id="/Volumes/Bumblebee/O.lurida_QuantSeq-2020/qc-processing/bowtie/mapped-sorted/185.sorted.bam" name="185.sorted.bam" visible="false">
+            <RenderOptions/>
+        </Track>
+    </Panel>
+    <HiddenAttributes>
+        <Attribute name="DATA FILE"/>
+        <Attribute name="DATA TYPE"/>
+        <Attribute name="NAME"/>
+    </HiddenAttributes>
+</Session>

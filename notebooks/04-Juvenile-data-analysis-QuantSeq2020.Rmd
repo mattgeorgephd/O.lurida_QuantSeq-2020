@@ -188,6 +188,9 @@ ggplotly(
     geom_point(size=4, aes(text=colnames(vsd.juv), label=colnames(vsd.juv))) + 
     scale_color_manual(values = c("#F8766D","#00BFC4","#F8766D","#00BFC4")) + 
     geom_text(aes(label=colnames(vsd.juv)), nudge_x=3, nudge_y=1.5, size=3), tooltip = "text")
+
+PCA.data.juvenile <- plotPCA(vsd.juv, intgroup=c("population","pCO2.parent"), returnData=TRUE)
+save(PCA.data.juvenile, file="../results/PCA.data.juvenile")
 ```
 
 ### Generate heat maps before & after transformation  

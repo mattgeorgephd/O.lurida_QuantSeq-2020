@@ -67,7 +67,7 @@ Just Temperature + pH (all cohorts combined - how i will assess)
 
 ```{r}
 larvae.size %>%
-          group_by(Temperature, pH) %>%
+          group_by(Temperature, pH) %>% #filter(Population!="Oyster Bay C2") %>%
           summarise(count= n_distinct(Sample))
 ```
 
@@ -121,7 +121,29 @@ save(larvae.size.mean, file = "../results/larvae.size.mean")
 #### Generate plots with average length by parental treatment 
 
 ```{r, echo=FALSE}
-print(max.mean <- ggplot(larvae.size.mean, aes(x=Temperature:pH, y=MaxFeret.mean)) + geom_boxplot() + geom_jitter(width=0.15, size=2, aes(color=Population)) + theme_bw(base_size = 14) + labs(title="Mean shell width, by treatment & cohort", y=("size (um)"), x="Treatment") + theme(text = element_text(size = 16)) + scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c")))
+# FIGURE FOR PAPER 
+print(max.mean <- ggplot(subset(larvae.size.mean, Population!="Oyster Bay C2"), aes(x=Temperature:pH, y=MaxFeret.mean)) + 
+          geom_boxplot() + geom_jitter(width=0.18, size=2.5, aes(color=Population), alpha=0.75) + 
+          theme_bw(base_size = 14) + labs(title="Larval shell width\nBy parental treatment & cohort", y=("Shell width (um)"), x="Treatment") + 
+          theme(text = element_text(size = 14), axis.title.x = element_blank()) + 
+          scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c"), name="Cohort") + 
+          #scale_size_date(name = "Date Released") + 
+          scale_x_discrete(labels=c("6:ambient" = "6°C\nAmbient pCO2", "6:low" = "6°C\nHigh pCO2", 
+                                    "10:ambient" = "10°C\nAmbient pCO2", "10:low" = "10°C\nHigh pCO2")) +
+    guides(colour = guide_legend(override.aes = list(size=4.5)))) 
+
+# Same larval size boxplots, but faceted by population 
+print(max.mean <- ggplot(data=subset(larvae.size.mean, Population!="Oyster Bay C2"), aes(x=Temperature:pH, y=MaxFeret.mean)) + 
+          geom_boxplot() + geom_jitter(width=0.18, size=2.5, aes(color=Population), alpha=0.75) + 
+          theme_bw() + labs(title="Larval shell width, by parental treatment & cohort", y=("Shell width (um)"), x="Treatment") + ylim(c(164.5,195)) + 
+          theme(text = element_text(size = 10), axis.title.x = element_blank()) + 
+          scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c"), name="Cohort") + 
+          #scale_size_date(name = "Date Released") + 
+          scale_x_discrete(labels=c("6:ambient" = "6°C\nAmbient\npCO2", "6:low" = "6°C\nHigh\npCO2", 
+                                    "10:ambient" = "10°C\nAmbient\npCO2", "10:low" = "10°C\nHigh\npCO2")) +
+    guides(colour = guide_legend(override.aes = list(size=4.5)))) + facet_wrap(~Population)
+
+
 
 print(min.mean <- ggplot(larvae.size.mean, aes(x=Temperature:pH, y=MinFeret.mean)) + geom_boxplot() + geom_jitter(width=0.15, size=2, aes(color=Population)) + theme_bw(base_size = 14) + labs(title="Mean shell height, by treatment & cohort", y=("size (um)"), x="Treatment") + theme(text = element_text(size = 16)) + scale_color_manual(values=c("#4daf4a","#377eb8","#984ea3","#e41a1c")))
 
@@ -172,9 +194,42 @@ Test for sign. differences among parental treatments using
 ```{r}
 anova(lm(MaxFeret.mean ~ Temperature + pH + Temperature:pH, data=larvae.size.mean)) #no interaction. Assess using type II sums of squares, where I look at effects of pH and temperature after controlling for the other factor 
 Anova(lm(MaxFeret.mean ~ Temperature*pH, data=larvae.size.mean), type=2) #both sign. 
-summary(lm(MaxFeret.mean ~ Temperature+pH, data=larvae.size.mean)) # Fit not great, though 
+summary(lm(MaxFeret.mean ~ Temperature+pH, data=larvae.size.mean)) # 
 TukeyHSD(aov(MaxFeret.mean ~ Temperature*pH, data=larvae.size.mean), type=2) #both sign. 
 
+# Sign. w/o OB2? 
+anova(lm(MaxFeret.mean ~ Temperature + pH + Temperature:pH, data=subset(larvae.size.mean, Population!="Oyster Bay C2"))) #no interaction. Assess using type II sums of squares, where I look at effects of pH and temperature after controlling for the other factor 
+Anova(lm(MaxFeret.mean ~ Temperature*pH, data=subset(larvae.size.mean, Population!="Oyster Bay C2")), type=2) #both sign. 
+summary(lm(MaxFeret.mean ~ Temperature+pH, data=subset(larvae.size.mean, Population!="Oyster Bay C2"))) # 
+```
+
+Test for sign. differences among parental treatments within population 
+
+```{r}
+Anova(lm(MaxFeret.mean ~ Population*Temperature*pH, data=larvae.size.mean), type=2) 
+Anova(aov(MaxFeret.mean ~ Temperature+pH+Population:Temperature:pH, data=larvae.size.mean), type=2)  
+summary(aov(MaxFeret.mean ~ Temperature+pH+Population:Temperature:pH, data=larvae.size.mean), type=2)  
+TukeyHSD(aov(MaxFeret.mean ~ Temperature+pH+Population:Temperature:pH, data=larvae.size.mean), type=2) 
+
+TukeyHSD(aov(MaxFeret.mean ~ Temperature+pH+Population:Temperature:pH, data=larvae.size.mean), type=2)$`Temperature:pH:Population` %>% as.data.frame() %>% filter(`p adj`<0.05)
+```
+Test for sign. differences among parental treatments within population - separate test for each population 
+
+```{r}
+print("Dabob Bay")
+summary(aov(MaxFeret.mean ~ Temperature*pH, data=subset(larvae.size.mean, Population=="Dabob Bay")))  #interaction, but no main effect 
+TukeyHSD(aov(MaxFeret.mean ~ Temperature:pH, data=subset(larvae.size.mean, Population=="Dabob Bay")))  # no sign. pairwise  
+
+print("Fidalgo Bay")
+summary(aov(MaxFeret.mean ~ Temperature*pH, data=subset(larvae.size.mean, Population=="Fidalgo Bay")))  #interaction, but no main effect 
+TukeyHSD(aov(MaxFeret.mean ~ Temperature + Temperature:pH, data=subset(larvae.size.mean, Population=="Fidalgo Bay")))  # 10low larger than 6 low 
+
+print("Oyster Bay C1")
+summary(aov(MaxFeret.mean ~ Temperature*pH, data=subset(larvae.size.mean, Population=="Oyster Bay C1")))  #temp & pH significant difference 
+TukeyHSD(aov(MaxFeret.mean ~ Temperature*pH, data=subset(larvae.size.mean, Population=="Oyster Bay C1")))  # and 10amb-6 amb, 6low-6amb, 10low-6amb = largest difference 
+
+print("Oyster Bay C2")
+summary(aov(MaxFeret.mean ~ Temperature*pH, data=subset(larvae.size.mean, Population=="Oyster Bay C2")))  #no effects 
 ```
 
 
@@ -184,8 +239,8 @@ Try mixed effect model, with Population as random effect
 display(lmer(MaxFeret.mean ~ Temperature*pH + (1|Population), data=larvae.size.mean))
 Anova(lmer(MaxFeret.mean ~ Temperature*pH + (1|Population), data=larvae.size.mean), type=2)
 
-display(lmer(MaxFeret.mean ~ Temperature+pH+ (1|Population), data=larvae.size.mean)) 
-Anova(lmer(MaxFeret.mean ~ Temperature+pH + (1|Population), data=larvae.size.mean), type=2) #with Pop as random effect and using type II SS, still sign. influence of temp and pH 
+display(lmer(MaxFeret.mean ~ Temperature+pH+ (1|Population), data=subset(larvae.size.mean, Population!="Oyster Bay C2"))) 
+Anova(lmer(MaxFeret.mean ~ Temperature+pH + (1|Population), data=subset(larvae.size.mean, Population!="Oyster Bay C2")), type=2) #with Pop as random effect and using type II SS, still sign. influence of temp and pH 
 ```
 
 #### Test min Feret Diameter (best estimate for larval height)
